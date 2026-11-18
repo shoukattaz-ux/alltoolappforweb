@@ -1,4 +1,4 @@
-export type Category = 'pdf' | 'image' | 'calculator';
+export type Category = 'pdf' | 'image' | 'video' | 'calculator';
 export interface Faq { q: string; a: string }
 export interface Tool {
   slug: string;
@@ -33,6 +33,11 @@ export const CATEGORIES: Record<Category, { name: string; path: string; title: s
     name: 'Image tools', path: '/image-tools/', title: 'Free Online Image Tools',
     description: 'Compress, resize, crop and convert JPG, PNG and WebP images in your browser. Private, fast and free, with no uploads.',
     blurb: 'Prepare photos and graphics for websites, email and social media. Resize to exact dimensions, crop to a ratio, change formats and cut file size, all locally in your browser.',
+  },
+  video: {
+    name: 'Video tools', path: '/video-tools/', title: 'Free Online Video Tools',
+    description: 'Compress videos in your browser with hardware-accelerated encoding. No uploads, no sign-up, no watermark.',
+    blurb: 'Shrink large videos for email, messaging and uploads. Choose a quality preset or a target size, trim and resize, and keep everything on your device.',
   },
   calculator: {
     name: 'Calculators', path: '/calculators/', title: 'Free Online Calculators',
@@ -311,6 +316,34 @@ export const TOOLS: Tool[] = [
     related: ['image-converter', 'image-compressor', 'image-resizer'],
     search: 'image to base64 encode data uri string html css embed',
   },
+  /* ------------------------------ Video ------------------------------ */
+  {
+    slug: 'video-compressor', name: 'Video Compressor', category: 'video', icon: 'video',
+    short: 'Shrink MP4, MOV and WebM videos by quality or target size, right on your device.',
+    seoTitle: 'Compress Video Online (Free, Private, No Watermark)',
+    metaDescription: 'Compress MP4, MOV and WebM videos in your browser. Pick a quality preset or a target file size, resize, trim and download. Free, no watermark, and your video is never uploaded.',
+    h1: 'Compress Video Online',
+    intro: 'Make a large video small enough to email, message or upload. Choose a quality preset or a target file size, optionally lower the resolution or trim the clip, and download the result. The video is processed by your browser\'s own video engine, so it is never uploaded.',
+    local: true,
+    steps: ['Select or drag in a video (MP4, MOV, WebM or MKV).', 'Pick "Quality preset" for the best balance, or "Target file size" to aim for a number such as 25 MB.', 'Optionally lower the resolution or frame rate, remove the audio, or trim the start and end.', 'Choose "Compress video", watch the progress bar, then preview and download the result.'],
+    features: ['Two ways to compress: four quality presets, or a target size in MB.', 'Resize to 1080p, 720p, 480p, 360p or 240p without ever upscaling.', 'Output as MP4 (H.264) for universal playback, WebM (VP9) for smaller files, or MP4 (AV1) for the smallest files, shown only when your browser can encode them.', 'Live size estimate before you start, and honest before and after sizes when you finish.', 'Trim start and end, cap the frame rate, or strip the audio track.', 'Preview the result in the page before downloading. Cancel at any time.', 'Hardware-accelerated where your device supports it. Nothing is uploaded and there is no watermark.'],
+    examples: [
+      { title: 'Fit an email attachment', body: 'Choose "Target file size", enter 20 MB, and a 90-second phone clip becomes small enough for a typical 25 MB email limit.' },
+      { title: 'Share a screen recording', body: 'Pick 720p and the Balanced preset. Screen recordings with large flat areas often shrink by 80% or more with no visible change.' },
+      { title: 'Cut a long video down', body: 'Enter a start and end time to keep only the part you need, then compress. Trimming and compressing happen in one pass.' },
+    ],
+    limits: ['Needs a browser with WebCodecs: current Chrome, Edge, Safari 16.4+ or Firefox 130+, over HTTPS.', 'Compression is lossy. Each re-encode costs a little quality, so keep your original.', 'Files up to 1 GB are accepted. Very long or 4K videos take time and use device memory, and speed depends on whether your device has a hardware encoder.', 'Keep this tab open and in the foreground while compressing. Some phones pause background tabs.', 'Variable-frame-rate screen recordings are handled, but some exotic codecs (for example some HEVC files in Chrome) cannot be decoded by the browser.', 'The result can occasionally be larger than the original if the source was already heavily compressed. The tool tells you when that happens.'],
+    faqs: [
+      { q: 'Is my video uploaded anywhere?', a: 'No. The file is read and re-encoded by your browser using its built-in video engine. There is no server involved, and closing the tab discards everything.' },
+      { q: 'Why is compression faster on some devices?', a: 'Many phones and laptops have a dedicated video encoder chip, which the browser uses automatically. Without one, encoding runs on the CPU and takes longer.' },
+      { q: 'Which format should I choose?', a: 'MP4 (H.264) plays almost everywhere. WebM (VP9) is typically 25% smaller at similar quality but is less supported on older Apple devices. AV1 is smallest of all but slowest and newest.' },
+      { q: 'Why did my video get bigger?', a: 'If the source was already compressed hard, re-encoding at a similar quality cannot shrink it further. Lower the preset, reduce the resolution, or use a target size.' },
+      { q: 'Does it keep the sound?', a: 'Yes, by default the audio is re-encoded at 96 kbps, which is clear for speech and music. You can also remove it entirely to save more space.' },
+      { q: 'What does "target file size" guarantee?', a: 'It is a close estimate, not an exact promise. The tool aims about 5% under your target; complex footage can land a little over.' },
+    ],
+    related: ['image-compressor', 'compress-pdf', 'image-converter'],
+    search: 'video compressor compress reduce shrink resize mp4 mov webm mkv movie clip file size trim',
+  },
   /* ---------------------------- Calculators --------------------------- */
   {
     slug: 'bmi-calculator', name: 'BMI Calculator', category: 'calculator', icon: 'heart',
@@ -422,5 +455,5 @@ export const toolsByCategory = (c: Category) => TOOLS.filter((t) => t.category =
 export const TOOL_UI_HEIGHT: Record<string, number> = {
   'merge-pdf': 361, 'sign-pdf': 325, 'split-pdf': 277, 'compress-pdf': 277, 'pdf-to-image': 295, 'image-to-pdf': 361,
   'image-compressor': 361, 'image-resizer': 277, 'image-cropper': 277, 'image-converter': 361, 'image-to-base64': 277,
-  'bmi-calculator': 334, 'percentage-calculator': 1047, 'age-calculator': 150, 'discount-calculator': 585,
+  'video-compressor': 361, 'bmi-calculator': 334, 'percentage-calculator': 1047, 'age-calculator': 150, 'discount-calculator': 585,
 };

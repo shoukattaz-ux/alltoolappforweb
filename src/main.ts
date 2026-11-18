@@ -7,7 +7,7 @@ import { home, directory, toolShell, bootTool, notFound } from './app/views';
 import { initPalette } from './app/palette';
 import { getTheme, setTheme, subscribe, getFavorites } from './app/store';
 
-const CATS: Category[] = ['pdf', 'image', 'calculator'];
+const CATS: Category[] = ['pdf', 'image', 'video', 'calculator'];
 const app = document.getElementById('app')!;
 
 app.innerHTML = `

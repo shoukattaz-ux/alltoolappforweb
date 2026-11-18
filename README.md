@@ -1,11 +1,12 @@
 # ToolHaven Studio
 
-One polished web app that brings every tool from the `alltools` site into a single, app-style workspace. All 15 tools run **entirely in the browser**: files are never uploaded.
+One polished web app that brings every tool from the `alltools` site, plus a new video compressor, into a single, app-style workspace. All 16 tools run **entirely in the browser**: files are never uploaded.
 
 | Category | Tools |
 | --- | --- |
 | PDF | Merge, Sign, Split, Compress, PDF to image, Image to PDF |
 | Image | Compress, Resize, Crop, Convert format, Image to Base64 |
+| Video | Compress (quality preset or target size, resize, trim, MP4/WebM) |
 | Calculators | BMI, Percentage, Age, Discount |
 
 ## App features
@@ -29,8 +30,8 @@ npm install
 npm run dev        # copies pdf.js font data, then starts Vite
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/
-npm test           # 52 unit tests (calculators, page ranges, file validation, signature placement)
-npm run test:e2e   # 30 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
+npm test           # 67 unit tests (calculators, page ranges, file validation, signature placement)
+npm run test:e2e   # 35 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
 npm run ci         # unit tests, build, then e2e
 ```
 
@@ -47,4 +48,6 @@ src/lib/              pure, unit-tested logic
 src/styles/           tools.css (design tokens + tool UI), app.css (app shell)
 ```
 
-Tool logic and tool UI come from the `alltools` repo. The app shell is new.
+The Video Compressor uses the browser's WebCodecs engine through [Mediabunny](https://mediabunny.dev) (MPL-2.0): hardware-accelerated where available, no WebAssembly download, nothing uploaded. It needs Chrome/Edge, Safari 16.4+ or Firefox 130+ over HTTPS, and says so clearly when unsupported.
+
+Tool logic and tool UI (other than the video tool) come from the `alltools` repo. The app shell is new.

@@ -1,17 +1,17 @@
 /* ToolHaven Studio app shell. Builds on the design tokens in tools.css. */
-:root { --sidebar-w: 288px; --pdf: #e11d48; --pdf-bg: #fff1f3; --img: #0d9488; --img-bg: #e6faf6; --calc: #d97706; --calc-bg: #fff6e0; --card: var(--surface); }
+:root { --sidebar-w: 288px; --pdf: #e11d48; --pdf-bg: #fff1f3; --img: #0d9488; --img-bg: #e6faf6; --vid: #7c3aed; --vid-bg: #f3ecff; --calc: #d97706; --calc-bg: #fff6e0; --card: var(--surface); }
 :root[data-theme="dark"] {
   color-scheme: dark;
   --ink: #eef2fb; --ink-2: #b4c0d6; --ink-3: #93a1ba;
   --bg: #0a1020; --surface: #111a30; --surface-2: #17223d; --line: #1f2c4a; --line-2: #2c3d62;
   --brand-50: #1a2145; --brand-100: #232c5c; --brand-200: #3a4590; --brand-300: #5a67d6; --brand-600: #7b82ff; --brand-700: #9aa0ff; --brand-800: #b6bbff;
   --ok: #52d6a0; --ok-bg: #0f2a22; --err: #ff8c93; --err-bg: #301418; --warn: #f3c969; --warn-bg: #2a2110;
-  --pdf-bg: #2f1520; --img-bg: #0d2a29; --calc-bg: #2d2210;
+  --pdf-bg: #2f1520; --vid-bg: #261a45; --img-bg: #0d2a29; --calc-bg: #2d2210;
   --shadow-xs: 0 1px 2px rgba(0,0,0,.4); --shadow-sm: 0 2px 8px rgba(0,0,0,.35); --shadow-md: 0 10px 30px rgba(0,0,0,.4); --shadow-lg: 0 24px 60px rgba(0,0,0,.5);
   --ring: 0 0 0 4px rgba(123,130,255,.3);
 }
-.cat-pdf { --c: var(--pdf); --cbg: var(--pdf-bg); --ct: #be123c; } .cat-image { --c: var(--img); --cbg: var(--img-bg); --ct: #0f766e; } .cat-calculator { --c: var(--calc); --cbg: var(--calc-bg); --ct: #92400e; }
-:root[data-theme="dark"] .cat-pdf { --ct: #ff9db3; } :root[data-theme="dark"] .cat-image { --ct: #5eead4; } :root[data-theme="dark"] .cat-calculator { --ct: #fcd34d; }
+.cat-pdf { --c: var(--pdf); --cbg: var(--pdf-bg); --ct: #be123c; } .cat-image { --c: var(--img); --cbg: var(--img-bg); --ct: #0f766e; } .cat-video { --c: var(--vid); --cbg: var(--vid-bg); --ct: #6d28d9; } .cat-calculator { --c: var(--calc); --cbg: var(--calc-bg); --ct: #92400e; }
+:root[data-theme="dark"] .cat-pdf { --ct: #ff9db3; } :root[data-theme="dark"] .cat-image { --ct: #5eead4; } :root[data-theme="dark"] .cat-calculator { --ct: #fcd34d; } :root[data-theme="dark"] .cat-video { --ct: #c4b5fd; }
 body.no-scroll { overflow: hidden; }
 kbd { font: 600 .72rem var(--font); padding: 2px 7px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line-2); color: var(--ink-2); box-shadow: 0 1px 0 var(--line-2); }
 
@@ -105,6 +105,15 @@ kbd { font: 600 .72rem var(--font); padding: 2px 7px; border-radius: 6px; backgr
 .tool-main .content-block { max-width: none; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 28px; box-shadow: var(--shadow-xs); }
 .aside-intro { font-size: .92rem; color: var(--ink-2); margin: 0; line-height: 1.6; }
 .side-box h2 { margin-top: 0; }
+
+/* Video compressor */
+.video-info { margin: 18px 0 4px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2); }
+.video-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 10px; }
+.video-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.video-stat { display: grid; } .video-stat em { font-style: normal; font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); font-weight: 700; } .video-stat b { font-weight: 650; }
+.video-estimate { margin: 14px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--brand-50); color: var(--ink-2); }
+.video-result { margin-top: 18px; } .video-preview { width: 100%; max-height: 460px; border-radius: 16px; background: #000; display: block; }
+:root[data-theme="dark"] .video-estimate { color: var(--ink); }
 
 /* Palette */
 .palette { position: fixed; inset: 0; z-index: 100; display: grid; justify-items: center; align-items: start; padding: 12vh 16px 16px; }

@@ -3,7 +3,7 @@ import { icon } from './icons';
 import { esc, toolHref, catHref, catLabel, searchTools, toolCard } from './util';
 import { getFavorites, getRecents, isFavorite, toggleFavorite, pushRecent } from './store';
 
-const CATS: Category[] = ['pdf', 'image', 'calculator'];
+const CATS: Category[] = ['pdf', 'image', 'video', 'calculator'];
 const pill = '<span class="privacy-pill">' + icon('shield', 16) + 'Runs in your browser. Nothing is uploaded.</span>';
 
 /* ------------------------------ Dashboard ------------------------------ */
@@ -17,7 +17,7 @@ export function home(): string {
     <div class="hero-text">
       <span class="eyebrow">${icon('sparkles', 15)} ${TOOLS.length} tools · zero uploads</span>
       <h1>Every tool you need.<br><span class="grad-text">Private by design.</span></h1>
-      <p class="lead">Merge, sign and compress PDFs, resize and convert images, and run everyday calculators. It all happens on your device, so your files stay yours.</p>
+      <p class="lead">Merge, sign and compress PDFs, compress videos, resize and convert images, and run everyday calculators. It all happens on your device, so your files stay yours.</p>
       <div class="hero-actions">
         <button class="btn btn-primary btn-large" data-open-palette>${icon('search', 18)} Find a tool <kbd>Ctrl K</kbd></button>
         <a class="btn btn-outline-light btn-large" href="#/tools">Browse all tools</a>
@@ -30,12 +30,12 @@ export function home(): string {
     </ul>
   </section>
   <div class="quick">
-    ${[['merge-pdf', 'Merge PDF'], ['sign-pdf', 'Sign PDF'], ['compress-pdf', 'Compress PDF'], ['image-compressor', 'Compress image'], ['image-resizer', 'Resize image'], ['bmi-calculator', 'BMI']]
+    ${[['merge-pdf', 'Merge PDF'], ['sign-pdf', 'Sign PDF'], ['compress-pdf', 'Compress PDF'], ['image-compressor', 'Compress image'], ['video-compressor', 'Compress video'], ['image-resizer', 'Resize image']]
       .map(([s, l]) => { const t = toolBySlug(s)!; return `<a class="quick-chip cat-${t.category}" href="${toolHref(t)}">${icon(t.icon, 17)}${l}</a>`; }).join('')}
   </div>
   ${favs.length ? section('Favorites', 'star', `<div class="tgrid">${favs.map((t) => toolCard(t!)).join('')}</div>`) : ''}
   ${recents.length ? section('Recently used', 'history', `<div class="tgrid">${recents.slice(0, 3).map((t) => toolCard(t!)).join('')}</div>`) : ''}
-  ${CATS.map((c) => section(CATEGORIES[c].name, c === 'pdf' ? 'pdf' : c === 'image' ? 'image' : 'calculator',
+  ${CATS.map((c) => section(CATEGORIES[c].name, c === 'pdf' ? 'pdf' : c === 'image' ? 'image' : c === 'video' ? 'video' : 'calculator',
       `<p class="muted block-blurb">${esc(CATEGORIES[c].blurb)}</p><div class="tgrid">${toolsByCategory(c).map((t) => toolCard(t, { fav: isFavorite(t.slug) })).join('')}</div>`,
       `<a class="more" href="${catHref(c)}">View all ${icon('arrow', 15)}</a>`)).join('')}
   <section class="trust">
@@ -51,7 +51,7 @@ export function directory(cat: Category | 'all' | 'favorites', query = ''): stri
   const title = cat === 'all' ? 'All tools' : cat === 'favorites' ? 'Favorites' : CATEGORIES[cat].name;
   const intro = cat === 'all' ? 'Every tool, one place. Filter by category or search by what you want to do.'
     : cat === 'favorites' ? 'Your starred tools, one click away.' : CATEGORIES[cat].blurb;
-  const tabs: [string, string, string][] = [['all', 'All', '#/tools'], ['pdf', 'PDF', '#/pdf'], ['image', 'Image', '#/image'], ['calculator', 'Calculators', '#/calculator'], ['favorites', 'Favorites', '#/favorites']];
+  const tabs: [string, string, string][] = [['all', 'All', '#/tools'], ['pdf', 'PDF', '#/pdf'], ['image', 'Image', '#/image'], ['video', 'Video', '#/video'], ['calculator', 'Calculators', '#/calculator'], ['favorites', 'Favorites', '#/favorites']];
   let list = cat === 'all' ? TOOLS : cat === 'favorites' ? TOOLS.filter((t) => isFavorite(t.slug)) : toolsByCategory(cat);
   if (query) list = searchTools(query).filter((t) => list.includes(t));
   return `
@@ -107,7 +107,7 @@ export function toolShell(slug: string): string | null {
   </div>`;
 }
 
-const loaders = import.meta.glob('../scripts/tools/*.ts') as Record<string, () => Promise<{ mount: (root: HTMLElement) => void }>>;
+const loaders = import.meta.glob('../scripts/tools/*.ts') as Record<string, () => Promise<{ mount: (root: HTMLElement) => void | Promise<void> }>>;
 
 export async function bootTool(slug: string, view: HTMLElement) {
   const t = toolBySlug(slug)!; pushRecent(slug);
@@ -126,7 +126,7 @@ export async function bootTool(slug: string, view: HTMLElement) {
     const load = loaders[`../scripts/tools/${t.slug}.ts`]; if (!load) throw new Error('Tool module not found');
     const mod = await load();
     if (!root.isConnected) return; // navigated away while loading
-    root.innerHTML = ''; root.removeAttribute('aria-busy'); mod.mount(root);
+    root.innerHTML = ''; root.removeAttribute('aria-busy'); await mod.mount(root);
   } catch (err) {
     console.error(err); root.removeAttribute('aria-busy');
     root.innerHTML = '<div class="notice notice-error" role="alert"><span>This tool could not be loaded. Check your connection, reload, and try a current version of Chrome, Edge, Firefox or Safari.</span></div>';

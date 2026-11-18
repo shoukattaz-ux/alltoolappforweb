@@ -76,12 +76,12 @@ const isPdf = (b) => b.subarray(0, 5).toString() === '%PDF-';
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 /* ---------- App shell tests ---------- */
-const ALL_TOOLS = ['merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
+const ALL_TOOLS = ['merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
 const axeSrc = readFileSync(resolve(here, '../../node_modules/axe-core/axe.min.js'), 'utf8');
 
 test('app: every route mounts with one h1, no console errors, and all form controls are labelled', async () => {
   const page = await newPage();
-  for (const r of ['', 'tools', 'pdf', 'image', 'calculator', 'favorites']) {
+  for (const r of ['', 'tools', 'pdf', 'image', 'video', 'calculator', 'favorites']) {
     await page.goto(`${base}/#/${r}`);
     await page.locator('#view h1').first().waitFor();
     assert.equal(await page.locator('#view h1').count(), 1, `#/${r} h1`);
@@ -97,12 +97,12 @@ test('app: every route mounts with one h1, no console errors, and all form contr
   await page.close();
 });
 
-test('app: dashboard lists all 15 tools; sidebar links every tool and marks the current one', async () => {
+test('app: dashboard lists all 16 tools; sidebar links every tool and marks the current one', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/`);
   await page.locator('.hero h1').waitFor();
-  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 15); // category sections only (favorites/recents may add more)
-  assert.equal(await page.locator('#nav .tool-link').count(), 15);
+  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 16); // category sections only (favorites/recents may add more)
+  assert.equal(await page.locator('#nav .tool-link').count(), 16);
   await page.goto(`${base}/#/tool/image-resizer`);
   await page.locator('#view h1').waitFor();
   assert.equal(await page.locator('#nav [aria-current="page"]').innerText().then((s) => s.trim()), 'Image Resizer');
@@ -115,7 +115,7 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
   await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
   await page.keyboard.press('Control+k');
   await page.locator('.palette-box').waitFor();
-  assert.equal(await page.locator('#pal-list li').count(), 15);
+  assert.equal(await page.locator('#pal-list li').count(), 16);
   await page.keyboard.type('pdf');
   const n = await page.locator('#pal-list li[data-i]').count();
   assert.ok(n >= 6, `pdf matches ${n}`);
@@ -136,13 +136,14 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
 test('app: directory tabs and live filter work, and the filter is kept in the URL', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/tools`); await page.locator('#dir-q').waitFor();
-  assert.equal(await page.locator('#dir-grid .tcard').count(), 15);
+  assert.equal(await page.locator('#dir-grid .tcard').count(), 16);
   await page.goto(`${base}/#/pdf`); assert.equal(await page.locator('#dir-grid .tcard').count(), 6);
   await page.goto(`${base}/#/image`); assert.equal(await page.locator('#dir-grid .tcard').count(), 5);
+  await page.goto(`${base}/#/video`); assert.equal(await page.locator('#dir-grid .tcard').count(), 1);
   await page.goto(`${base}/#/calculator`); assert.equal(await page.locator('#dir-grid .tcard').count(), 4);
-  await page.goto(`${base}/#/tools`); await page.locator('#dir-q').fill('resize');
+  await page.goto(`${base}/#/tools`); await page.locator('#dir-q').fill('base64');
   await page.waitForFunction(() => document.querySelectorAll('#dir-grid .tcard').length === 1);
-  assert.match(page.url(), /q=resize/);
+  assert.match(page.url(), /q=base64/);
   await page.locator('#dir-q').fill('qqqq'); await page.getByText('No tools match').waitFor();
   await page.close();
 });
@@ -878,6 +879,144 @@ test('accessibility: PDF Signer with a document loaded and each dialog open', as
   await drawSignature(page, 'Navy');
   await scan('with item selected');
   assert.deepEqual(bad, []);
+});
+
+
+/* ---------- Video Compressor ---------- */
+/** Records a short animated clip (with an audio tone) in the browser and returns it as a WebM buffer. */
+async function makeVideo(page, { w = 1280, h = 720, seconds = 2, audio = true } = {}) {
+  const b64 = await page.evaluate(async ({ w, h, seconds, audio }) => {
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const ctx = c.getContext('2d');
+    const stream = c.captureStream(30); let ac = null;
+    if (audio) { ac = new AudioContext(); const osc = ac.createOscillator(); const dest = ac.createMediaStreamDestination(); osc.connect(dest); osc.start(); dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t)); }
+    const rec = new MediaRecorder(stream, { mimeType: audio ? 'video/webm;codecs=vp9,opus' : 'video/webm;codecs=vp9', videoBitsPerSecond: 6_000_000 });
+    const chunks = []; rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    const done = new Promise((r) => { rec.onstop = r; }); rec.start(200);
+    const t0 = performance.now(); let n = 0;
+    await new Promise((resolve) => { const draw = () => {
+      const t = (performance.now() - t0) / 1000; n++;
+      ctx.fillStyle = `hsl(${(t * 90) % 360} 70% 45%)`; ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 60; i++) { ctx.fillStyle = `hsl(${(i * 37 + n * 5) % 360} 80% 60%)`; ctx.fillRect((i * 97 + n * 13) % w, (i * 53 + n * 7) % h, 120, 80); }
+      ctx.fillStyle = '#fff'; ctx.font = '64px sans-serif'; ctx.fillText(`frame ${n}`, 60, 120);
+      t < seconds ? requestAnimationFrame(draw) : resolve(); }; draw(); });
+    rec.stop(); await done; ac?.close();
+    const buf = new Uint8Array(await new Blob(chunks, { type: 'video/webm' }).arrayBuffer());
+    let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    return btoa(s);
+  }, { w, h, seconds, audio });
+  return Buffer.from(b64, 'base64');
+}
+/** Loads a video buffer in a <video> element and reports its real, decoded dimensions and duration. */
+const probeVideo = (page, data, mime) => page.evaluate(async ({ b64, mime }) => {
+  const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.src = URL.createObjectURL(new Blob([u], { type: mime }));
+  await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('output video is not playable')); setTimeout(() => rej(new Error('probe timeout')), 15000); });
+  if (!Number.isFinite(v.duration)) { v.currentTime = 1e9; await new Promise((r) => { v.ontimeupdate = r; setTimeout(r, 3000); }); }
+  return { w: v.videoWidth, h: v.videoHeight, d: v.duration };
+}, { b64: data.toString('base64'), mime });
+const hasText = (buffer, text) => buffer.includes(Buffer.from(text));
+
+async function compressVideo(page, { setup } = {}) {
+  if (setup) await setup();
+  const out = await download(page, async () => {
+    await page.getByRole('button', { name: 'Compress video', exact: true }).click();
+    await root(page).getByRole('button', { name: /^Download/ }).waitFor({ timeout: 120000 });
+    await root(page).getByRole('button', { name: /^Download/ }).click();
+  });
+  return out;
+}
+
+test('Video Compressor: reads the clip, resizes to 480p, outputs a playable WebM that is smaller and keeps its audio', async () => {
+  const page = await openTool('video-compressor');
+  const src = await makeVideo(page);
+  await fileInput(page).setInputFiles([buf('clip.webm', src)]);
+  await root(page).getByText('1280×720').first().waitFor({ timeout: 30000 });
+  assert.match(await root(page).locator('.video-info').innerText(), /Audio\s*Yes/i);
+  await page.getByLabel('Resolution').selectOption('480');
+  await page.getByLabel('Output format').selectOption('webm-vp9');
+  await page.getByLabel('Quality').selectOption('small');
+  assert.match(await root(page).locator('.video-estimate').innerText(), /Estimated result: about .* at 852×480/);
+  const out = await compressVideo(page);
+  assert.equal(out.name, 'clip-compressed.webm');
+  assert.ok(out.buf.length < src.length, `output ${out.buf.length} not smaller than input ${src.length}`);
+  assert.ok(hasText(out.buf, 'V_VP9'), 'VP9 video track'); assert.ok(hasText(out.buf, 'A_OPUS'), 'audio track kept');
+  const p = await probeVideo(page, out.buf, 'video/webm');
+  assert.equal(p.h, 480); assert.equal(p.w, 852); assert.ok(p.d > 1.4 && p.d < 3.2, `duration ${p.d}`);
+  await root(page).getByText(/Done in .*→.*% smaller|saved/i).first().waitFor();
+  assert.ok(await root(page).locator('video.video-preview').isVisible());
+  await page.close();
+});
+
+test('Video Compressor: remove audio, trim, and MP4 (H.264) output', async () => {
+  const page = await openTool('video-compressor');
+  const src = await makeVideo(page, { seconds: 3 });
+  await fileInput(page).setInputFiles([buf('long.webm', src)]);
+  await root(page).getByText('1280×720').first().waitFor({ timeout: 30000 });
+  await page.getByLabel('Resolution').selectOption('360');
+  await page.getByLabel('Output format').selectOption('webm-vp9');
+  await page.getByLabel('Audio').selectOption('remove');
+  await page.getByLabel('Trim: start (optional)').fill('0:00.5');
+  await page.getByLabel('Trim: end (optional)').fill('2');
+  const webm = await compressVideo(page);
+  assert.ok(!hasText(webm.buf, 'A_OPUS'), 'audio should be removed');
+  const pw = await probeVideo(page, webm.buf, 'video/webm');
+  assert.equal(pw.h, 360); assert.ok(pw.d > 1.0 && pw.d < 2.0, `trimmed duration ${pw.d} (expected ~1.5)`);
+  // MP4 / H.264
+  await page.getByLabel('Trim: start (optional)').fill(''); await page.getByLabel('Trim: end (optional)').fill('');
+  await page.getByLabel('Output format').selectOption('mp4-avc');
+  const mp4 = await compressVideo(page);
+  assert.equal(mp4.name, 'long-compressed.mp4');
+  assert.ok(hasText(mp4.buf.subarray(0, 64), 'ftyp'), 'MP4 container'); assert.ok(hasText(mp4.buf, 'avc1'), 'H.264 track');
+  const pm = await probeVideo(page, mp4.buf, 'video/mp4');
+  assert.equal(pm.h, 360); assert.ok(pm.d > 2.4 && pm.d < 3.8, `mp4 duration ${pm.d}`);
+  await page.close();
+});
+
+test('Video Compressor: target file size lands near the target', async () => {
+  const page = await openTool('video-compressor');
+  const src = await makeVideo(page, { seconds: 3, audio: false });
+  await fileInput(page).setInputFiles([buf('t.webm', src)]);
+  await root(page).getByText('1280×720').first().waitFor({ timeout: 30000 });
+  await page.getByLabel('Output format').selectOption('webm-vp9');
+  await page.getByRole('button', { name: 'Target file size' }).click();
+  await page.getByLabel(/Target size/).fill('0.4');
+  const out = await compressVideo(page);
+  assert.ok(out.buf.length < src.length, 'smaller than input');
+  assert.ok(out.buf.length < 0.4 * 1024 * 1024 * 1.5, `size ${out.buf.length} too far above the 0.4 MB target`);
+  await page.close();
+});
+
+test('Video Compressor: rejects fake, damaged and invalid-trim input with clear messages; Clear resets', async () => {
+  const page = await openTool('video-compressor');
+  await fileInput(page).setInputFiles([buf('fake.mp4', Buffer.from('this is definitely not a video file at all'))]);
+  await root(page).getByText(/not a supported file/).waitFor();
+  const header = Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypisom'), Buffer.alloc(200, 7)]);
+  await fileInput(page).setInputFiles([buf('broken.mp4', header)]);
+  await root(page).getByText(/could not be read|No video track|cannot decode|damaged|unsupported/i).first().waitFor({ timeout: 20000 });
+  assert.ok(await root(page).getByRole('button', { name: 'Compress video', exact: true }).isDisabled());
+  const src = await makeVideo(page, { seconds: 1, audio: false });
+  await fileInput(page).setInputFiles([buf('ok.webm', src)]);
+  await root(page).getByText('1280×720').first().waitFor({ timeout: 30000 });
+  await page.getByLabel('Trim: start (optional)').fill('abc');
+  await root(page).getByRole('button', { name: 'Compress video', exact: true }).click();
+  await root(page).getByText(/Start time must look like/).waitFor();
+  await page.getByLabel('Trim: start (optional)').fill('99');
+  await root(page).getByRole('button', { name: 'Compress video', exact: true }).click();
+  await root(page).getByText(/before the end of the video/).waitFor();
+  await root(page).getByRole('button', { name: 'Clear', exact: true }).click();
+  assert.ok(await root(page).locator('.video-info').isHidden());
+  await page.close();
+});
+
+test('accessibility: Video Compressor with a video loaded', async () => {
+  const page = await openTool('video-compressor');
+  await fileInput(page).setInputFiles([buf('a.webm', await makeVideo(page, { seconds: 1 }))]);
+  await root(page).getByText('1280×720').first().waitFor({ timeout: 30000 });
+  await page.waitForTimeout(400);
+  await page.evaluate(axeSrc);
+  const res = await page.evaluate(() => axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] } }));
+  assert.deepEqual(res.violations.map((v) => `${v.id}: ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`), []);
+  await page.close();
 });
 
 /* ---------- runner ---------- */

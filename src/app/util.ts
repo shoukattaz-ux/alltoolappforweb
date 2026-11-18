@@ -5,7 +5,7 @@ import { icon } from './icons';
 export const esc = escapeHtml;
 export const toolHref = (t: Tool) => `#/tool/${t.slug}`;
 export const catHref = (c: Category) => `#/${c}`;
-export const catLabel: Record<Category, string> = { pdf: 'PDF', image: 'Image', calculator: 'Calculator' };
+export const catLabel: Record<Category, string> = { pdf: 'PDF', image: 'Image', video: 'Video', calculator: 'Calculator' };
 
 /** Simple scored search over name, description and keywords. */
 export function searchTools(query: string): Tool[] {
