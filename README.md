@@ -26,9 +26,11 @@ npm run dev        # copies pdf.js font data, then starts Vite
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/
 npm test           # 52 unit tests (calculators, page ranges, file validation, signature placement)
+npm run test:e2e   # 29 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
+npm run ci         # unit tests, build, then e2e
 ```
 
-Node 20+. Deploy `dist/` to any static host (hash routing, so no rewrite rules are needed).
+Node 20+. The e2e tests use the Chromium at `/opt/pw-browsers/chromium` (or set `CHROMIUM_PATH`). Deploy `dist/` to any static host (hash routing, so no rewrite rules are needed).
 
 ## Structure
 

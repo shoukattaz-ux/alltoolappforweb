@@ -3,3 +3,4 @@ dist/
 public/pdfjs/
 *.log
 .wrangler/
+tests/e2e/.tmp/

@@ -13,7 +13,7 @@ const app = document.getElementById('app')!;
 app.innerHTML = `
 <div class="shell">
   <aside class="sidebar-nav" id="sidebar" aria-label="Main">
-    <a class="brand" href="#/" aria-label="ToolHaven home"><img src="/favicon.svg" width="36" height="36" alt="" /><span>ToolHaven<small>Studio</small></span></a>
+    <a class="brand" href="#/"><img src="/favicon.svg" width="36" height="36" alt="" /><span>ToolHaven<small>Studio</small></span></a>
     <button class="search-btn" data-open-palette>${icon('search', 17)}<span>Search tools</span><kbd>Ctrl K</kbd></button>
     <nav id="nav"></nav>
     <div class="side-foot">
