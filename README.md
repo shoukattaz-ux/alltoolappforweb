@@ -18,6 +18,10 @@ One polished web app that brings every tool from the `alltools` site into a sing
 - Light and dark themes (follows the system, remembered per browser)
 - Each tool is its own code-split chunk, loaded only when opened
 
+## Security
+
+`public/_headers` ships a strict Content-Security-Policy (`script-src 'self'`, `connect-src 'self' blob: data:`, no framing, no plugins), HSTS, `nosniff`, a locked-down Permissions-Policy and COOP. The e2e server enforces the same headers, so every test runs under the real policy, and a test confirms inline scripts and off-origin requests are blocked. If you add analytics or ads, extend the policy deliberately.
+
 ## Commands
 
 ```bash
@@ -26,7 +30,7 @@ npm run dev        # copies pdf.js font data, then starts Vite
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/
 npm test           # 52 unit tests (calculators, page ranges, file validation, signature placement)
-npm run test:e2e   # 29 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
+npm run test:e2e   # 30 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
 npm run ci         # unit tests, build, then e2e
 ```
 

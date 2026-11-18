@@ -186,6 +186,28 @@ test('app: tool tabs switch between tool, guide and FAQ without losing the tool 
   await page.close();
 });
 
+test('security: CSP and hardening headers ship, and the CSP blocks inline scripts and foreign requests', async () => {
+  const dist = readFileSync(resolve(here, '../../dist/_headers'), 'utf8');
+  for (const h of ['Content-Security-Policy', 'Strict-Transport-Security', 'X-Content-Type-Options: nosniff', 'X-Frame-Options: DENY', 'Referrer-Policy', 'Permissions-Policy', 'Cross-Origin-Opener-Policy']) assert.ok(dist.includes(h), `${h} missing from dist/_headers`);
+  const csp = /Content-Security-Policy: (.+)/.exec(dist)[1];
+  assert.match(csp, /script-src 'self'(;|$)/); assert.doesNotMatch(csp, /unsafe-eval|script-src[^;]*unsafe-inline/);
+  assert.match(csp, /connect-src 'self' blob: data:/); assert.match(csp, /frame-ancestors 'none'/); assert.match(csp, /object-src 'none'/);
+  assert.equal((readFileSync(resolve(here, '../../dist/index.html'), 'utf8').match(/<script(?![^>]*\ssrc=)[^>]*>/g) ?? []).length, 0, 'inline <script> in index.html');
+  const page = await newPage();
+  const res = await page.goto(`${base}/`);
+  assert.equal(res.headers()['content-security-policy'], csp); assert.equal(res.headers()['x-frame-options'], 'DENY');
+  const r = await page.evaluate(async () => {
+    const out = {};
+    try { const s = document.createElement('script'); s.textContent = 'window.__pwned = 1'; document.head.append(s); } catch { /* ignore */ }
+    out.inline = !!window.__pwned;
+    try { await fetch('https://example.com/', { mode: 'no-cors' }); out.fetch = 'allowed'; } catch { out.fetch = 'blocked'; }
+    return out;
+  });
+  assert.deepEqual(r, { inline: false, fetch: 'blocked' });
+  problems = []; // the CSP violations above are the point of this test
+  await page.close();
+});
+
 test('app: unknown routes show a not-found view', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/tool/does-not-exist`);
