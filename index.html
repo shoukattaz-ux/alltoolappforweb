@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ToolHaven Studio: PDF, image and calculator tools</title>
+  <meta name="description" content="Every PDF, image and calculator tool in one fast, private app. Everything runs in your browser; your files never leave your device." />
+  <meta name="theme-color" content="#4f46e5" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <script>
+    try { var t = localStorage.getItem('th:theme'); if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.dataset.theme = 'dark'; } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#view">Skip to content</a>
+  <div id="app"></div>
+  <noscript><p style="padding:24px;font-family:sans-serif">ToolHaven needs JavaScript because every tool runs in your browser.</p></noscript>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
