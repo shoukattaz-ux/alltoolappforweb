@@ -1,6 +1,7 @@
 /** Small DOM + UX helpers shared by every tool. All text goes through textContent/attributes, never innerHTML, so file names cannot inject markup. */
 import { validateFiles, KIND_LABEL, type FileKind, type ValidatedFile } from '../lib/files';
 import { formatBytes } from '../lib/format';
+import { takeHandoff } from './handoff';
 
 type Child = Node | string | number | null | undefined | false;
 export type Props = Record<string, unknown> | null;
@@ -159,6 +160,9 @@ export function dropzone(opts: DropzoneOptions) {
     if (accepted.length) await opts.onFiles(accepted);
   };
   input.addEventListener('change', async () => { await handle(input.files ?? []); input.value = ''; });
+  // Files handed over from the dashboard ("Start with a file") load straight into the first drop area a tool creates.
+  const handed = takeHandoff();
+  if (handed.length) queueMicrotask(() => { void handle(handed); });
   el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drag'); });
   el.addEventListener('dragleave', () => el.classList.remove('drag'));
   el.addEventListener('drop', async (e) => { e.preventDefault(); el.classList.remove('drag'); await handle(e.dataTransfer?.files ?? []); });

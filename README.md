@@ -1,15 +1,19 @@
 # ToolHaven Studio
 
-One polished web app that brings every tool from the `alltools` site, plus a new video compressor, into a single, app-style workspace. All 16 tools run **entirely in the browser**: files are never uploaded.
+One polished web app that brings every tool from the `alltools` site, plus a new video compressor, into a single, app-style workspace. All 17 tools run **entirely in the browser**: files are never uploaded.
 
 | Category | Tools |
 | --- | --- |
-| PDF | Merge, Sign, Split, Compress, PDF to image, Image to PDF |
+| PDF | **Read (new)**, Merge, Sign, Split, Compress, PDF to image, Image to PDF |
 | Image | Compress, Resize, Crop, Convert format, Image to Base64 |
 | Video | Compress (quality preset or target size, resize, trim, MP4/WebM) |
 | Calculators | BMI, Percentage, Age, Discount |
 
 ## App features
+
+- **Start with a file**: drop or choose any PDF, image or video on the dashboard (or anywhere on the page) and the app shows what you can do with it. Pick one and the tool opens with your file already loaded.
+- **PDF Reader**: smooth scrolling for long documents (only nearby pages are drawn), zoom and fit modes, pinch to zoom, rotate, search with highlighted matches, page thumbnails, night mode, selectable text, password-protected PDFs, and one-tap hand-off to sign, split, compress or convert the same file.
+- Plain-language task buttons ("Make a PDF smaller", "Shrink a video"), a thumb-friendly bottom bar on phones, and confirmation messages.
 
 - Sidebar workspace with every tool grouped by category, and a responsive mobile drawer
 - Dashboard with hero, quick actions, **favorites** and **recently used** tools
@@ -41,8 +45,8 @@ npm install
 npm run dev        # copies pdf.js font data, then starts Vite
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/
-npm test           # 73 unit tests (calculators, page ranges, file validation, signature placement)
-npm run test:e2e   # 41 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
+npm test           # 88 unit tests (calculators, page ranges, file validation, signature placement)
+npm run test:e2e   # 56 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
 npm run ci         # unit tests, build, then e2e
 ```
 

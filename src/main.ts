@@ -5,6 +5,8 @@ import { icon } from './app/icons';
 import { esc, toolHref, catHref } from './app/util';
 import { home, directory, toolShell, bootTool, notFound, privacy } from './app/views';
 import { SITE } from './data/site';
+import { bindLauncher, installGlobalDrop } from './app/launcher';
+import { clearHandoff } from './scripts/handoff';
 import { initPalette } from './app/palette';
 import { getTheme, setTheme, subscribe, getFavorites } from './app/store';
 
@@ -30,6 +32,7 @@ app.innerHTML = `
       <button class="icon-btn" data-open-palette aria-label="Search tools">${icon('search', 20)}</button>
     </header>
     <main id="view" tabindex="-1"></main>
+    <nav class="bottom-nav" id="bottom-nav" aria-label="Quick navigation"></nav>
     <footer class="app-foot">© ${new Date().getFullYear()} ${SITE.name} · Built for privacy: processed locally, never uploaded. · <a href="#/privacy">Privacy</a></footer>
   </div>
 </div>`;
@@ -39,6 +42,7 @@ const nav = document.getElementById('nav')!;
 const sidebar = document.getElementById('sidebar')!;
 const menuBtn = document.getElementById('menu-btn')!;
 const themeBtn = document.getElementById('theme-btn')!;
+const bottomNav = document.getElementById('bottom-nav')!;
 
 function renderNav(hash: string) {
   const link = (href: string, label: string, ic: string, extra = '') =>
@@ -49,6 +53,8 @@ function renderNav(hash: string) {
       <a class="nav-link" href="#/favorites" ${hash === '#/favorites' ? 'aria-current="page"' : ''}>${icon('star', 18)}<span>Favorites</span>${favCount ? `<em class="count">${favCount}</em>` : ''}</a></div>
     ${CATS.map((c) => `<div class="nav-group cat-${c}"><h2 class="nav-title"><a href="${catHref(c)}">${CATEGORIES[c].name}</a></h2>
       ${toolsByCategory(c).map((t) => `<a class="nav-link tool-link" href="${toolHref(t)}" ${hash === toolHref(t) ? 'aria-current="page"' : ''}><span class="nav-dot">${icon(t.icon, 16)}</span><span>${esc(t.name)}</span></a>`).join('')}</div>`).join('')}`;
+  const tab = (href: string, label: string, ic: string) => `<a class="bn-item" href="${href}" ${hash === href ? 'aria-current="page"' : ''}>${icon(ic, 22)}<span>${label}</span></a>`;
+  bottomNav.innerHTML = `${tab('#/', 'Home', 'home')}${tab('#/tools', 'Tools', 'grid')}<button type="button" class="bn-item" data-open-palette>${icon('search', 22)}<span>Search</span></button>${tab('#/favorites', 'Favorites', 'star')}`;
   themeBtn.innerHTML = getTheme() === 'dark' ? `${icon('sun', 17)}<span>Light mode</span>` : `${icon('moon', 17)}<span>Dark mode</span>`;
 }
 
@@ -64,14 +70,15 @@ function route() {
   let title = 'ToolHaven Studio: PDF, video, image and calculator tools';
   setMenu(false);
   const seg = path.replace(/^#\/?/, '');
-  if (seg === '') view.innerHTML = home();
+  if (seg === '') { view.innerHTML = home(); bindLauncher(view); }
   else if (seg === 'tools') { view.innerHTML = directory('all', q); title = 'All tools · ToolHaven'; }
   else if (seg === 'privacy') { view.innerHTML = privacy(); title = `Privacy · ${SITE.name}`; }
   else if (seg === 'favorites') { view.innerHTML = directory('favorites', q); title = 'Favorites · ToolHaven'; }
   else if ((CATS as string[]).includes(seg)) { view.innerHTML = directory(seg as Category, q); title = `${CATEGORIES[seg as Category].name} · ToolHaven`; }
   else if (seg.startsWith('tool/') && toolBySlug(seg.slice(5))) {
-    const slug = seg.slice(5); view.innerHTML = toolShell(slug)!; title = `${toolBySlug(slug)!.name} · ToolHaven`; void bootTool(slug, view);
+    const slug = seg.slice(5); view.innerHTML = toolShell(slug)!; title = `${toolBySlug(slug)!.name} · ToolHaven`; void bootTool(slug, view).finally(clearHandoff);
   } else { view.innerHTML = notFound(); title = 'Not found · ToolHaven'; }
+  if (!seg.startsWith('tool/')) clearHandoff();
   document.title = title;
   renderNav(path);
   window.scrollTo(0, 0);
@@ -97,4 +104,5 @@ themeBtn.addEventListener('click', () => setTheme(getTheme() === 'dark' ? 'light
 subscribe(() => renderNav((location.hash || '#/').split('?')[0]));
 window.addEventListener('hashchange', route);
 initPalette();
+installGlobalDrop(() => ((location.hash || '#/').split('?')[0].replace(/^#\/?/, '') === ''), () => view);
 route();

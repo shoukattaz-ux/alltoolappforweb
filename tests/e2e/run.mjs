@@ -76,7 +76,7 @@ const isPdf = (b) => b.subarray(0, 5).toString() === '%PDF-';
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 /* ---------- App shell tests ---------- */
-const ALL_TOOLS = ['merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
+const ALL_TOOLS = ['pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
 const axeSrc = readFileSync(resolve(here, '../../node_modules/axe-core/axe.min.js'), 'utf8');
 
 test('app: every route mounts with one h1, no console errors, and all form controls are labelled', async () => {
@@ -97,12 +97,12 @@ test('app: every route mounts with one h1, no console errors, and all form contr
   await page.close();
 });
 
-test('app: dashboard lists all 16 tools; sidebar links every tool and marks the current one', async () => {
+test('app: dashboard lists all 17 tools; sidebar links every tool and marks the current one', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/`);
   await page.locator('.hero h1').waitFor();
-  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 16); // category sections only (favorites/recents may add more)
-  assert.equal(await page.locator('#nav .tool-link').count(), 16);
+  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 17); // category sections only (favorites/recents may add more)
+  assert.equal(await page.locator('#nav .tool-link').count(), 17);
   await page.goto(`${base}/#/tool/image-resizer`);
   await page.locator('#view h1').waitFor();
   assert.equal(await page.locator('#nav [aria-current="page"]').innerText().then((s) => s.trim()), 'Image Resizer');
@@ -115,7 +115,7 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
   await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
   await page.keyboard.press('Control+k');
   await page.locator('.palette-box').waitFor();
-  assert.equal(await page.locator('#pal-list li').count(), 16);
+  assert.equal(await page.locator('#pal-list li').count(), 17);
   await page.keyboard.type('pdf');
   const n = await page.locator('#pal-list li[data-i]').count();
   assert.ok(n >= 6, `pdf matches ${n}`);
@@ -136,8 +136,8 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
 test('app: directory tabs and live filter work, and the filter is kept in the URL', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/tools`); await page.locator('#dir-q').waitFor();
-  assert.equal(await page.locator('#dir-grid .tcard').count(), 16);
-  await page.goto(`${base}/#/pdf`); assert.equal(await page.locator('#dir-grid .tcard').count(), 6);
+  assert.equal(await page.locator('#dir-grid .tcard').count(), 17);
+  await page.goto(`${base}/#/pdf`); assert.equal(await page.locator('#dir-grid .tcard').count(), 7);
   await page.goto(`${base}/#/image`); assert.equal(await page.locator('#dir-grid .tcard').count(), 5);
   await page.goto(`${base}/#/video`); assert.equal(await page.locator('#dir-grid .tcard').count(), 1);
   await page.goto(`${base}/#/calculator`); assert.equal(await page.locator('#dir-grid .tcard').count(), 4);
@@ -1136,6 +1136,263 @@ test('android: the web build still downloads normally (native path is not used i
   const r = await download(page, () => root(page).getByRole('button', { name: 'Download', exact: true }).first().click());
   assert.equal(r.name, 'a-compressed.png'); assert.equal(r.buf.subarray(1, 4).toString(), 'PNG');
   await page.close();
+});
+
+
+/* ---------- PDF Reader ---------- */
+async function readerOpen(page, data, name = 'doc.pdf') {
+  await fileInput(page).setInputFiles([buf(name, data)]);
+  await page.locator('.rd-page canvas').first().waitFor({ timeout: 20000 });
+}
+const pageBox = (page, n) => page.locator(`.rd-page[data-page="${n}"]`).evaluate((e) => ({ w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height }));
+
+test('PDF Reader: draws only the pages near you (low memory), jumps to any page, and exposes selectable text', async () => {
+  const page = await openTool('pdf-reader');
+  await readerOpen(page, await makePdf(30, [612, 792], 'Chapter'));
+  assert.equal(await page.locator('.rd-total').innerText(), 'of 30');
+  assert.ok(await page.locator('.rd-page').count() === 30);
+  assert.ok(await page.locator('.rd-page canvas').count() <= 6, 'only pages near the viewport should be drawn');
+  await page.locator('.rd-page-input').fill('20'); await page.keyboard.press('Enter');
+  await page.locator('.rd-page[data-page="20"] canvas').waitFor({ timeout: 15000 });
+  await page.waitForFunction(() => document.querySelectorAll('.rd-page[data-page="1"] canvas').length === 0, null, { timeout: 15000 });
+  assert.ok(await page.locator('.rd-page canvas').count() <= 6, 'pages far away are released');
+  assert.equal(await page.locator('.rd-page-input').inputValue(), '20');
+  await page.waitForFunction(() => /Chapter 20/.test(document.querySelector('.rd-page[data-page="20"] .rd-text')?.textContent ?? ''), null, { timeout: 15000 });
+  await page.getByRole('button', { name: 'Previous page' }).click();
+  await page.waitForFunction(() => document.querySelector('.rd-page-input').value === '19');
+  await page.close();
+});
+
+test('PDF Reader: zoom (fit width, steps, menu), rotate and keyboard shortcuts', async () => {
+  const page = await openTool('pdf-reader');
+  await readerOpen(page, await makePdf(3, [612, 792], 'Page'));
+  const avail = await page.locator('.rd-scroll').evaluate((e) => e.clientWidth - 32);
+  assert.ok(Math.abs((await pageBox(page, 1)).w - avail) <= 2, 'fit width fills the viewer');
+  await page.locator('.rd-zoom').selectOption('2');
+  await page.waitForFunction(() => Math.abs(document.querySelector('.rd-page[data-page="1"]').getBoundingClientRect().width - 1632) <= 2);
+  await page.getByRole('button', { name: 'Zoom out' }).click();           // 200% -> 175%
+  await page.waitForFunction(() => Math.abs(document.querySelector('.rd-page[data-page="1"]').getBoundingClientRect().width - 1428) <= 2);
+  await page.locator('.rd-zoom').selectOption('1');
+  await page.waitForFunction(() => Math.abs(document.querySelector('.rd-page[data-page="1"]').getBoundingClientRect().width - 816) <= 2);
+  assert.equal(Math.round((await pageBox(page, 1)).h), 1056);
+  await page.getByRole('button', { name: 'Rotate view' }).click();      // 90deg: width and height swap
+  await page.waitForFunction(() => Math.abs(document.querySelector('.rd-page[data-page="1"]').getBoundingClientRect().width - 1056) <= 2);
+  assert.equal(Math.round((await pageBox(page, 1)).h), 816);
+  await page.locator('.rd-page[data-page="1"] canvas').waitFor();
+  await page.locator('.rd-scroll').focus(); await page.keyboard.press('0');   // 0 = back to fit width
+  assert.equal(await page.locator('.rd-zoom').inputValue(), 'width');
+  await page.keyboard.press('+'); assert.notEqual(await page.locator('.rd-zoom').inputValue(), 'width');
+  // the zoom controls stop at their limits
+  for (let i = 0; i < 20; i++) await page.keyboard.press('-');
+  assert.ok(await page.getByRole('button', { name: 'Zoom out' }).isDisabled());
+  await page.close();
+});
+
+test('PDF Reader: search highlights every match, steps through them across pages, and reports no matches', async () => {
+  const page = await openTool('pdf-reader');
+  await readerOpen(page, await makePdf(30, [612, 792], 'Chapter'));
+  await page.locator('.rd-search').fill('chapter 1');           // Chapter 1 and Chapter 10..19 = 11 matches
+  await page.getByText('1 of 11').waitFor({ timeout: 15000 });
+  assert.ok(await page.locator('.rd-page[data-page="1"] .rd-hit-cur').count() === 1, 'the current match is highlighted');
+  assert.equal((await page.locator('.rd-page[data-page="1"] .rd-hit').first().innerText()).toLowerCase(), 'chapter 1');
+  await page.locator('.rd-search').press('Enter');
+  await page.getByText('2 of 11').waitFor();
+  await page.waitForFunction(() => document.querySelector('.rd-page-input').value === '10', null, { timeout: 15000 });
+  await page.waitForFunction(() => document.querySelectorAll('.rd-page[data-page="10"] .rd-hit-cur').length === 1, null, { timeout: 15000 });
+  await page.locator('.rd-search').press('Shift+Enter');
+  await page.getByText('1 of 11').waitFor();
+  await page.getByRole('button', { name: 'Next match' }).click();
+  await page.getByText('2 of 11').waitFor();
+  await page.locator('.rd-search').fill('zzzzqq'); await page.getByText('No matches').waitFor({ timeout: 15000 });
+  assert.ok(await page.getByRole('button', { name: 'Next match' }).isDisabled());
+  await page.locator('.rd-search').fill(''); await page.waitForFunction(() => document.querySelector('.rd-count').textContent === '');
+  assert.equal(await page.locator('.rd-hit').count(), 0, 'highlights are cleared');
+  await page.close();
+});
+
+test('PDF Reader: night mode, thumbnails and page jumps', async () => {
+  const page = await openTool('pdf-reader');
+  await readerOpen(page, await makePdf(15, [612, 792], 'Page'));
+  const night = page.getByRole('button', { name: 'Night mode' });
+  assert.equal(await night.getAttribute('aria-pressed'), 'false');
+  await night.click(); assert.equal(await night.getAttribute('aria-pressed'), 'true');
+  assert.ok(await page.locator('.rd.rd-night').count() === 1);
+  await night.click(); assert.equal(await page.locator('.rd.rd-night').count(), 0);
+  const thumbsBtn = page.locator('.rd-thumbs-btn');
+  if (await thumbsBtn.getAttribute('aria-pressed') !== 'true') await thumbsBtn.click();
+  await page.locator('.rd-thumbs').waitFor({ state: 'visible' });
+  await page.locator('[data-thumb="1"] canvas').waitFor({ timeout: 15000 });   // thumbnails draw lazily
+  await page.locator('[data-thumb="12"]').click();
+  await page.waitForFunction(() => document.querySelector('.rd-page-input').value === '12');
+  assert.equal(await page.locator('[data-thumb="12"]').getAttribute('aria-current'), 'page');
+  await page.close();
+});
+
+test('PDF Reader: opens password-protected PDFs, rejects a wrong password, and then shows the text', async () => {
+  const page = await openTool('pdf-reader');
+  await fileInput(page).setInputFiles(resolve(here, '../fixtures/encrypted.pdf'));
+  await page.locator('.rd-password').waitFor({ state: 'visible' });
+  await page.getByLabel('This PDF is password protected').fill('wrong-password');
+  await page.getByRole('button', { name: 'Open PDF' }).click();
+  await page.getByText('That password is not correct').waitFor({ timeout: 15000 });
+  await page.getByLabel('This PDF is password protected').fill('open-sesame');
+  await page.getByRole('button', { name: 'Open PDF' }).click();
+  await page.locator('.rd-page canvas').first().waitFor({ timeout: 20000 });
+  await page.waitForFunction(() => /Secret quarterly figures/.test(document.querySelector('.rd-text')?.textContent ?? ''), null, { timeout: 15000 });
+  assert.ok(await page.locator('.rd-password').isHidden());
+  await page.close();
+});
+
+test('PDF Reader: rejects fake and damaged files; "Open another PDF" returns to the picker; "Do more" hands the same file to another tool', async () => {
+  const page = await openTool('pdf-reader');
+  await fileInput(page).setInputFiles([buf('fake.pdf', Buffer.from('hello'))]);
+  await root(page).getByText(/not a supported file/).waitFor();
+  await fileInput(page).setInputFiles([buf('broken.pdf', Buffer.from('%PDF-1.7\ngarbage'))]);
+  await root(page).getByText(/damaged|could not be processed/i).first().waitFor({ timeout: 15000 });
+  await readerOpen(page, await makePdf(3, [612, 792], 'Page'), 'mine.pdf');
+  await page.getByRole('button', { name: 'Open another PDF' }).click();
+  await page.locator('.rd-stage').waitFor({ state: 'hidden' });
+  await readerOpen(page, await makePdf(3, [612, 792], 'Page'), 'mine.pdf');
+  await page.locator('.rd-more').selectOption('sign-pdf');
+  await page.waitForFunction(() => location.hash === '#/tool/sign-pdf');
+  await page.locator('.sign-stage canvas').waitFor({ timeout: 30000 });          // the signer opened the same PDF, no re-selecting
+  await page.close();
+});
+
+test('PDF Reader: the sample document opens and is searchable', async () => {
+  const page = await openTool('pdf-reader');
+  await page.getByRole('button', { name: 'Try a sample document' }).click();
+  await page.locator('.rd-page canvas').first().waitFor({ timeout: 20000 });
+  await page.locator('.rd-search').fill('agreement');
+  await page.waitForFunction(() => /\d+ of \d+/.test(document.querySelector('.rd-count').textContent), null, { timeout: 15000 });
+  await page.close();
+});
+
+/* ---------- Easy to use: dashboard launcher, handoff, mobile bottom bar ---------- */
+test('launcher: a dropped PDF offers the right tools, and the chosen tool opens with the file already loaded', async () => {
+  const page = await newPage();
+  await page.goto(`${base}/#/`); await page.locator('#launcher-input').waitFor({ state: 'attached' });
+  await page.locator('#launcher-input').setInputFiles([buf('three.pdf', await makePdf(3))]);
+  const res = page.locator('#launcher-result');
+  await res.getByText('1 PDF').waitFor();
+  const labels = await res.locator('.act strong').allInnerTexts();
+  assert.deepEqual(labels, ['Read it', 'Sign it', 'Make it smaller', 'Pull out pages', 'Turn pages into images']);
+  await res.getByRole('button', { name: /Make it smaller/ }).click();
+  await page.waitForFunction(() => location.hash === '#/tool/compress-pdf');
+  await page.locator('#tool-root').getByText(/3 pages/).waitFor({ timeout: 15000 });
+  await page.goto(`${base}/#/tool/image-compressor`);       // the handoff must not leak into the next tool
+  await fileInput(page).waitFor({ state: 'attached' }); await page.waitForTimeout(300);
+  assert.equal(await page.locator('#tool-root .file-item').count(), 0);
+  await page.close();
+});
+
+test('launcher: several PDFs lead with "Combine"; images, mixed and unsupported files are handled clearly', async () => {
+  const page = await newPage();
+  await page.goto(`${base}/#/`); await page.locator('#launcher-input').waitFor({ state: 'attached' });
+  const res = page.locator('#launcher-result');
+  await page.locator('#launcher-input').setInputFiles([buf('a.pdf', await makePdf(1)), buf('b.pdf', await makePdf(2))]);
+  await res.getByText('2 PDFs').waitFor();
+  assert.equal((await res.locator('.act strong').first().innerText()), 'Combine PDFs');
+  await res.getByRole('button', { name: /Combine PDFs/ }).click();
+  await page.waitForFunction(() => location.hash === '#/tool/merge-pdf');
+  await page.waitForFunction(() => document.querySelectorAll('#tool-root .file-item').length === 2, null, { timeout: 15000 });
+  await page.goto(`${base}/#/`); await page.locator('#launcher-input').waitFor({ state: 'attached' });
+  const png = await makeImage(page, {});
+  await page.locator('#launcher-input').setInputFiles([buf('p.png', png), buf('notes.txt', Buffer.from('plain text'))]);
+  await res.getByText('1 image').waitFor();
+  assert.match(await res.innerText(), /1 unsupported file was ignored/);
+  await res.getByRole('button', { name: /Resize/ }).click();
+  await page.waitForFunction(() => location.hash === '#/tool/image-resizer');
+  await page.locator('#tool-root').getByText(/400\s*×\s*300|p\.png/).first().waitFor({ timeout: 15000 });
+  await page.goto(`${base}/#/`); await page.locator('#launcher-input').waitFor({ state: 'attached' });
+  await page.locator('#launcher-input').setInputFiles([buf('a.pdf', await makePdf(1)), buf('p.png', png)]);
+  await res.getByText('1 PDF').waitFor();
+  assert.match(await res.innerText(), /1 file was left out/);
+  await page.locator('#launcher-input').setInputFiles([buf('x.txt', Buffer.from('nope'))]);
+  await res.getByText(/not supported/).waitFor();
+  await page.close();
+});
+
+test('launcher: a file dropped anywhere on the dashboard shows the overlay and the same suggestions', async () => {
+  const page = await newPage();
+  await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
+  const pdf = (await makePdf(1)).toString('base64');
+  await page.evaluate((b64) => {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const dt = new DataTransfer(); dt.items.add(new File([bytes], 'dropped.pdf', { type: 'application/pdf' }));
+    window.__dt = dt; window.dispatchEvent(new DragEvent('dragenter', { dataTransfer: dt, bubbles: true }));
+  }, pdf);
+  assert.ok(await page.locator('.drop-overlay').isVisible(), 'overlay appears while dragging a file over the page');
+  await page.evaluate(() => window.dispatchEvent(new DragEvent('drop', { dataTransfer: window.__dt, bubbles: true, cancelable: true })));
+  assert.ok(await page.locator('.drop-overlay').isHidden());
+  await page.locator('#launcher-result').getByText('1 PDF').waitFor();
+  // other screens are untouched: no overlay while dragging on a tool page
+  await page.goto(`${base}/#/tool/merge-pdf`); await fileInput(page).waitFor({ state: 'attached' });
+  await page.evaluate(() => window.dispatchEvent(new DragEvent('dragenter', { dataTransfer: window.__dt ?? new DataTransfer(), bubbles: true })));
+  assert.ok(await page.locator('.drop-overlay').isHidden());
+  await page.close();
+});
+
+test('mobile: a thumb-friendly bottom bar replaces the sidebar, marks the current screen, and opens search', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  const page = await ctx.newPage(); page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
+  const bar = page.locator('#bottom-nav');
+  assert.ok(await bar.isVisible());
+  assert.deepEqual(await bar.locator('.bn-item span').allInnerTexts(), ['Home', 'Tools', 'Search', 'Favorites']);
+  assert.equal(await bar.locator('[aria-current="page"]').innerText(), 'Home');
+  await bar.getByText('Tools').click();
+  await page.waitForFunction(() => location.hash === '#/tools');
+  assert.equal(await bar.locator('[aria-current="page"]').innerText(), 'Tools');
+  await bar.getByText('Search').click(); await page.locator('.palette-box').waitFor();
+  await page.keyboard.press('Escape');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+  await ctx.close();
+  const wide = await newPage(); await wide.goto(`${base}/#/`); await wide.locator('.hero h1').waitFor();
+  assert.ok(await wide.locator('#bottom-nav').isHidden(), 'no bottom bar on desktop');
+  await wide.close();
+});
+
+test('mobile: the PDF reader fits a phone screen without sideways scrolling', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  const page = await ctx.newPage(); page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  await page.goto(`${base}/#/tool/pdf-reader`); await fileInput(page).waitFor({ state: 'attached' });
+  await fileInput(page).setInputFiles([buf('m.pdf', await makePdf(4))]);
+  await page.locator('.rd-page canvas').first().waitFor({ timeout: 20000 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+  const w = await page.locator('.rd-page[data-page="1"]').evaluate((e) => e.getBoundingClientRect().width);
+  assert.ok(w <= 390, `page ${w}px wide on a 390px screen`);
+  await ctx.close();
+});
+
+test('favorites: saving a tool shows a confirmation message', async () => {
+  const page = await newPage();
+  await page.goto(`${base}/#/tool/age-calculator`); await page.locator('#fav-btn').waitFor();
+  await page.locator('#fav-btn').click();
+  await page.getByText(/Age Calculator added to your favorites/).waitFor();
+  await page.locator('#fav-btn').click(); // leave storage clean for later tests
+  await page.close();
+});
+
+test('accessibility: dashboard launcher with suggestions, and the PDF Reader with a document and search', async () => {
+  const page = await newPage();
+  const bad = [];
+  const scan = async (label) => {
+    await page.evaluate(axeSrc);
+    const res = await page.evaluate(() => axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] } }));
+    for (const v of res.violations) bad.push(`${label}: ${v.id} (${v.impact}) ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`);
+  };
+  await page.goto(`${base}/#/`); await page.locator('#launcher-input').waitFor({ state: 'attached' });
+  await page.locator('#launcher-input').setInputFiles([buf('a.pdf', await makePdf(2))]); await page.locator('#launcher-result .act').first().waitFor();
+  await page.waitForTimeout(450); await scan('dashboard with suggestions');
+  await page.goto(`${base}/#/tool/pdf-reader`); await fileInput(page).waitFor({ state: 'attached' });
+  await readerOpen(page, await makePdf(5, [612, 792], 'Chapter'));
+  await page.locator('.rd-search').fill('chapter'); await page.getByText(/\d+ of \d+/).first().waitFor({ timeout: 15000 });
+  await page.waitForTimeout(450); await scan('reader');
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; }); await page.waitForTimeout(300); await scan('reader (dark theme)');
+  await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor(); await page.waitForTimeout(450); await scan('dashboard (dark theme)');
+  await page.close();
+  assert.deepEqual(bad, []);
 });
 
 /* ---------- runner ---------- */

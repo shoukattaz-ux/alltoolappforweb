@@ -49,6 +49,31 @@ export const CATEGORIES: Record<Category, { name: string; path: string; title: s
 export const TOOLS: Tool[] = [
   /* ------------------------------- PDF ------------------------------- */
   {
+    slug: 'pdf-reader', name: 'PDF Reader', category: 'pdf', icon: 'reader',
+    short: 'Open, search and read any PDF with zoom, thumbnails and night mode.',
+    seoTitle: 'PDF Reader Online: Open, Search & Read PDFs (Free, Private)',
+    metaDescription: 'Read PDF files in your browser. Smooth scrolling, zoom, text search with highlights, page thumbnails, night mode and password-protected PDFs. Free, and your file is never uploaded.',
+    h1: 'Read a PDF Online',
+    intro: 'Open a PDF and read it right here: scroll smoothly, zoom, jump to any page, search for words and copy text. Password-protected files work too. The document is opened by your browser, so it is never uploaded.',
+    local: true,
+    steps: ['Select or drag in a PDF, or choose "Try a sample document".', 'Scroll to read. Use the page box to jump, the zoom menu or the + and \u2212 buttons to resize, and the thumbnail button to browse pages.', 'Type in the search box and press Enter to move between matches. Matches are highlighted on the page.', 'Need to change the file? Use "Do more with this PDF" to sign it, pull out pages, shrink it or turn pages into images.'],
+    features: ['Smooth scrolling, even for long documents: only the pages near you are drawn, so memory stays low.', 'Zoom from 25% to 400%, fit to width or page, pinch to zoom on touch screens, and rotate the view.', 'Search with every match highlighted, and next and previous buttons.', 'Select and copy text, just as in a desktop reader.', 'Page thumbnails, a page number box, and full-screen mode.', 'Night mode for reading in the dark, without changing the file.', 'Opens password-protected PDFs: the password is used on your device only.', 'One tap from reading to signing, splitting, compressing or converting the same file.'],
+    examples: [
+      { title: 'Check a long contract', body: 'Search for \u201ctermination\u201d, step through every match, then choose \u201cDo more\u201d to sign it without picking the file again.' },
+      { title: 'Read on your phone', body: 'Pinch to zoom, use the thumbnails to jump around, and switch on night mode in the evening.' },
+    ],
+    limits: ['This is a viewer: it does not edit the PDF or fill in forms.', 'Links inside the PDF and its table of contents are not clickable yet.', 'Search matches words inside a single line of text. A phrase that the PDF splits across separate text runs may not be found.', 'Scanned PDFs are pictures of pages, so they have no text to search or copy.', 'Very large pages at high zoom are drawn at slightly lower sharpness to protect your device\u2019s memory.'],
+    faqs: [
+      { q: 'Is my PDF uploaded anywhere?', a: 'No. The file is opened and drawn by code running in your browser tab. Closing the tab discards it.' },
+      { q: 'Why can I not search my PDF?', a: 'If the PDF is a scan, each page is just a picture, so there is no text to find. The reader tells you when that is the case.' },
+      { q: 'Can it open a password-protected PDF?', a: 'Yes. You will be asked for the password, which is used only on your device. If it is wrong, you can try again.' },
+      { q: 'How do I copy text?', a: 'Click and drag over the text, then copy as usual. On a phone, press and hold a word.' },
+      { q: 'Why does it feel fast on a long document?', a: 'Only the pages around the part you are reading are drawn. Pages you scroll away from are released, so even a 500-page file stays light.' },
+    ],
+    related: ['sign-pdf', 'split-pdf', 'compress-pdf', 'merge-pdf'],
+    search: 'pdf reader viewer open read view search find document pages zoom',
+  },
+  {
     slug: 'merge-pdf', name: 'PDF Merger', category: 'pdf', icon: 'merge',
     short: 'Combine several PDFs into one document, in the order you choose.',
     seoTitle: 'Merge PDF Files Online (Free, Private)',
@@ -453,7 +478,7 @@ export const toolsByCategory = (c: Category) => TOOLS.filter((t) => t.category =
  * Measured from the real interface; re-measure if you change a tool's initial layout.
  */
 export const TOOL_UI_HEIGHT: Record<string, number> = {
-  'merge-pdf': 361, 'sign-pdf': 325, 'split-pdf': 277, 'compress-pdf': 277, 'pdf-to-image': 295, 'image-to-pdf': 361,
+  'pdf-reader': 361, 'merge-pdf': 361, 'sign-pdf': 325, 'split-pdf': 277, 'compress-pdf': 277, 'pdf-to-image': 295, 'image-to-pdf': 361,
   'image-compressor': 361, 'image-resizer': 277, 'image-cropper': 277, 'image-converter': 361, 'image-to-base64': 277,
   'video-compressor': 361, 'bmi-calculator': 334, 'percentage-calculator': 1047, 'age-calculator': 150, 'discount-calculator': 585,
 };

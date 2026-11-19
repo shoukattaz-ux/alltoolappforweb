@@ -31,6 +31,17 @@ export async function openPdfJs(file: Blob) {
 }
 export type PdfJsDocument = Awaited<ReturnType<typeof openPdfJs>>;
 
+/** Opens a PDF for the reader: supports password-protected files by asking `onPassword` for the password. */
+export function openPdfJsInteractive(data: Uint8Array, onPassword: (provide: (pw: string) => void, wrong: boolean) => void) {
+  const task = pdfjs.getDocument({
+    data, isEvalSupported: false, useSystemFonts: false,
+    cMapUrl: '/pdfjs/cmaps/', cMapPacked: true, standardFontDataUrl: '/pdfjs/standard_fonts/',
+  });
+  task.onPassword = (provide: (pw: string) => void, reason: number) => onPassword(provide, reason === pdfjs.PasswordResponses.INCORRECT_PASSWORD);
+  return task;
+}
+export const TextLayer = pdfjs.TextLayer;
+
 /** Render one page (1-based) to a canvas at `scale` (1 = 72 DPI), scaling down if it would exceed the pixel budget. */
 export async function renderPage(doc: PdfJsDocument, pageNumber: number, scale: number, background?: string) {
   const page = await doc.getPage(pageNumber);
