@@ -991,7 +991,11 @@ test('Video Compressor: remove audio, trim, and MP4 (H.264) output', async () =>
   assert.ok(!hasText(webm.buf, 'A_OPUS'), 'audio should be removed');
   const pw = await probeVideo(page, webm.buf, 'video/webm');
   assert.equal(pw.h, 360); assert.ok(pw.d > 1.0 && pw.d < 2.0, `trimmed duration ${pw.d} (expected ~1.5)`);
-  // MP4 / H.264
+  // MP4 / H.264 (only when this browser build can encode H.264; stock open-source Chromium may not)
+  if (await page.getByLabel('Output format').locator('option[value="mp4-avc"]').count() === 0) {
+    console.log('        (skipping the MP4/H.264 part: this browser has no H.264 encoder, so the tool correctly does not offer it)');
+    await page.close(); return;
+  }
   await page.getByLabel('Trim: start (optional)').fill(''); await page.getByLabel('Trim: end (optional)').fill('');
   await page.getByLabel('Output format').selectOption('mp4-avc');
   const mp4 = await compressVideo(page);

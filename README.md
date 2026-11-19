@@ -42,7 +42,7 @@ npm run test:e2e   # 38 real-browser tests (build first): every tool with real f
 npm run ci         # unit tests, build, then e2e
 ```
 
-Node 20+. The e2e tests use the Chromium at `/opt/pw-browsers/chromium` (or set `CHROMIUM_PATH`). Deploy `dist/` to any static host (hash routing, so no rewrite rules are needed).
+Node 20+. GitHub Actions (`.github/workflows/ci.yml`) runs the unit tests, the build and the browser tests on every push and pull request. The e2e tests use the Chromium at `/opt/pw-browsers/chromium` (or set `CHROMIUM_PATH`). Deploy `dist/` to any static host (hash routing, so no rewrite rules are needed).
 
 ## Structure
 
