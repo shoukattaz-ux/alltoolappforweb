@@ -76,7 +76,7 @@ const isPdf = (b) => b.subarray(0, 5).toString() === '%PDF-';
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 /* ---------- App shell tests ---------- */
-const ALL_TOOLS = ['scan-to-pdf', 'pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
+const ALL_TOOLS = ['organize-pdf', 'scan-to-pdf', 'pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
 const axeSrc = readFileSync(resolve(here, '../../node_modules/axe-core/axe.min.js'), 'utf8');
 
 test('app: every route mounts with one h1, no console errors, and all form controls are labelled', async () => {
@@ -97,12 +97,12 @@ test('app: every route mounts with one h1, no console errors, and all form contr
   await page.close();
 });
 
-test('app: dashboard lists all 18 tools; sidebar links every tool and marks the current one', async () => {
+test('app: dashboard lists all 19 tools; sidebar links every tool and marks the current one', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/`);
   await page.locator('.hero h1').waitFor();
-  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 18); // category sections only (favorites/recents may add more)
-  assert.equal(await page.locator('#nav .tool-link').count(), 18);
+  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 19); // category sections only (favorites/recents may add more)
+  assert.equal(await page.locator('#nav .tool-link').count(), 19);
   await page.goto(`${base}/#/tool/image-resizer`);
   await page.locator('#view h1').waitFor();
   assert.equal(await page.locator('#nav [aria-current="page"]').innerText().then((s) => s.trim()), 'Image Resizer');
@@ -115,7 +115,7 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
   await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
   await page.keyboard.press('Control+k');
   await page.locator('.palette-box').waitFor();
-  assert.equal(await page.locator('#pal-list li').count(), 18);
+  assert.equal(await page.locator('#pal-list li').count(), 19);
   await page.keyboard.type('pdf');
   const n = await page.locator('#pal-list li[data-i]').count();
   assert.ok(n >= 6, `pdf matches ${n}`);
@@ -136,8 +136,8 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
 test('app: directory tabs and live filter work, and the filter is kept in the URL', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/tools`); await page.locator('#dir-q').waitFor();
-  assert.equal(await page.locator('#dir-grid .tcard').count(), 18);
-  await page.goto(`${base}/#/pdf`); assert.equal(await page.locator('#dir-grid .tcard').count(), 8);
+  assert.equal(await page.locator('#dir-grid .tcard').count(), 19);
+  await page.goto(`${base}/#/pdf`); assert.equal(await page.locator('#dir-grid .tcard').count(), 9);
   await page.goto(`${base}/#/image`); assert.equal(await page.locator('#dir-grid .tcard').count(), 5);
   await page.goto(`${base}/#/video`); assert.equal(await page.locator('#dir-grid .tcard').count(), 1);
   await page.goto(`${base}/#/calculator`); assert.equal(await page.locator('#dir-grid .tcard').count(), 4);
@@ -1277,7 +1277,7 @@ test('launcher: a dropped PDF offers the right tools, and the chosen tool opens 
   const res = page.locator('#launcher-result');
   await res.getByText('1 PDF').waitFor();
   const labels = await res.locator('.act strong').allInnerTexts();
-  assert.deepEqual(labels, ['Read it', 'Sign it', 'Make it smaller', 'Pull out pages', 'Turn pages into images']);
+  assert.deepEqual(labels, ['Read it', 'Sign it', 'Reorder or rotate pages', 'Make it smaller', 'Pull out pages', 'Turn pages into images']);
   await res.getByRole('button', { name: /Make it smaller/ }).click();
   await page.waitForFunction(() => location.hash === '#/tool/compress-pdf');
   await page.locator('#tool-root').getByText(/3 pages/).waitFor({ timeout: 15000 });
@@ -1564,6 +1564,105 @@ test('accessibility: Scan to PDF with a page loaded and the corner editor open',
   await fileInput(page).first().setInputFiles([buf('desk.jpg', await makeScanPhoto(page))]); await scanReady(page); await page.waitForTimeout(450); await scan('scanner');
   await btn(page, 'Adjust corners').click(); await page.locator('.sc-crop-dialog').waitFor(); await page.waitForTimeout(450); await scan('corner editor'); await page.keyboard.press('Escape');
   await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; }); await page.waitForTimeout(300); await scan('scanner (dark theme)');
+  await page.close(); assert.deepEqual(bad, []);
+});
+
+
+/* ---------- PDF Page Organizer ---------- */
+/** A PDF whose page i is (200 + 20*i) points wide, so the order of pages in a saved file can be read from page widths. */
+async function widthsPdf(n = 6) { const d = await PDFDocument.create(); for (let i = 1; i <= n; i++) { const p = d.addPage([200 + 20 * i, 300]); p.drawText(`Page ${i}`, { x: 20, y: 150, size: 24 }); } return Buffer.from(await d.save()); }
+const pagesOf = async (data) => (await PDFDocument.load(data)).getPages().map((p) => ({ w: Math.round(p.getWidth()), rot: p.getRotation().angle }));
+const orgReady = async (page, n = 6) => { await page.locator('.og-card').nth(n - 1).waitFor({ timeout: 20000 }); await page.waitForFunction((n) => document.querySelectorAll('.og-img[src^="data:image"]').length >= n, n, { timeout: 20000 }); };
+const orgOpen = async (page, n = 6) => { await fileInput(page).first().setInputFiles([buf('report.pdf', await widthsPdf(n))]); await orgReady(page, n); };
+const orgSave = (page) => download(page, async () => { await btn(page, 'Save PDF').click(); await root(page).getByRole('button', { name: 'Download PDF' }).click(); });
+const card = (page, i) => page.locator('.og-card').nth(i);
+
+test('PDF Page Organizer: thumbnails for every page; select, rotate, delete, restore, duplicate and add blank pages; the saved PDF matches', async () => {
+  const page = await openTool('organize-pdf'); await orgOpen(page);
+  assert.equal(await page.locator('.og-card').count(), 6); assert.match(await page.locator('.og-summary').innerText(), /^6 pages will be saved\.$/);
+  await card(page, 1).locator('button[aria-label^="Delete"]').click();
+  assert.ok(await card(page, 1).locator('.og-badge').isVisible()); assert.match(await page.locator('.og-summary').innerText(), /5 pages will be saved \(1 deleted\)/);
+  await card(page, 1).locator('button[aria-label^="Restore"]').click(); assert.match(await page.locator('.og-summary').innerText(), /^6 pages/); await card(page, 1).locator('button[aria-label^="Delete"]').click(); // delete again for the final check
+  await card(page, 2).locator('button[aria-label^="Rotate right"]').click();
+  assert.match(await card(page, 2).locator('.og-img').getAttribute('style'), /rotate\(90deg\)/);
+  await card(page, 0).locator('button[aria-label^="Duplicate"]').click(); assert.equal(await page.locator('.og-card').count(), 7);
+  // positions are numbered among the kept pages; the deleted one shows a dash
+  assert.deepEqual(await page.locator('.og-num').allInnerTexts(), ['1', '2', '–', '3', '4', '5', '6']);
+  await card(page, 4).locator('.og-check').check(); assert.equal(await page.locator('.og-count').innerText(), '1 selected');  // original page 4 (after the duplicate and the deleted page)
+  await btn(page, 'Add blank page').click(); assert.equal(await page.locator('.og-card').count(), 8);
+  assert.ok(await page.locator('.og-badge-blank').isVisible());
+  const out = await orgSave(page); assert.equal(out.name, 'report-organized.pdf');
+  assert.deepEqual(await pagesOf(out.buf), [{ w: 220, rot: 0 }, { w: 220, rot: 0 }, { w: 260, rot: 90 }, { w: 280, rot: 0 }, { w: 220, rot: 0 }, { w: 300, rot: 0 }, { w: 320, rot: 0 }]);
+  await page.close();
+});
+
+test('PDF Page Organizer: drag a page with the mouse to a new position, and reorder with the keyboard', async () => {
+  const page = await openTool('organize-pdf'); await orgOpen(page);
+  const grip = card(page, 4).locator('.og-grab'); await grip.scrollIntoViewIfNeeded(); const gb = await grip.boundingBox(); const target = await card(page, 0).boundingBox();   // (both are in the first row, so both are on screen)
+  await page.mouse.move(gb.x + gb.width / 2, gb.y + gb.height / 2); await page.mouse.down();
+  await page.mouse.move(target.x + 10, target.y + target.height / 2, { steps: 10 });
+  assert.ok(await page.locator('.og-ghost').isVisible(), 'a ghost follows the pointer'); assert.ok(await page.locator('.og-dropbar').isVisible(), 'a bar shows where it will land');
+  await page.mouse.up();
+  assert.equal(await page.locator('.og-ghost').count(), 0); assert.match(await page.locator('.og-summary').innerText(), /reordered/);
+  const out = await orgSave(page); assert.deepEqual((await pagesOf(out.buf)).map((p) => p.w), [300, 220, 240, 260, 280, 320]);
+  // keyboard: focus the grip of the first card, move it right twice, then to the end and back to the start
+  await card(page, 0).locator('.og-grab').focus(); await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
+  assert.equal(await page.evaluate(() => document.activeElement.closest('.og-card') === document.querySelectorAll('.og-card')[2]), true, 'focus follows the moved page');
+  await page.keyboard.press('End'); assert.equal(await page.evaluate(() => document.activeElement.closest('.og-card') === document.querySelectorAll('.og-card')[5]), true);
+  await page.keyboard.press('Home'); assert.equal(await page.evaluate(() => document.activeElement.closest('.og-card') === document.querySelectorAll('.og-card')[0]), true);
+  const out2 = await orgSave(page); assert.deepEqual((await pagesOf(out2.buf)).map((p) => p.w), [300, 220, 240, 260, 280, 320], 'after Home the keyboard-moved page is back where it began');
+  await page.close();
+});
+
+test('PDF Page Organizer: select all / none, bulk rotate, reverse order, undo, and Save is disabled when no page is kept', async () => {
+  const page = await openTool('organize-pdf'); await orgOpen(page);
+  await btn(page, 'Select all').click(); assert.equal(await page.locator('.og-count').innerText(), '6 selected');
+  await btn(page, 'Rotate left').click(); assert.deepEqual((await pagesOf((await orgSave(page)).buf)).map((p) => p.rot), [270, 270, 270, 270, 270, 270]);
+  await btn(page, 'Select none').click(); assert.ok(await btn(page, 'Rotate right').isDisabled(), 'bulk actions need a selection');
+  await btn(page, 'Reverse order').click(); assert.deepEqual((await pagesOf((await orgSave(page)).buf)).map((p) => p.w), [320, 300, 280, 260, 240, 220]);
+  await btn(page, 'Undo all changes').click(); const back = await pagesOf((await orgSave(page)).buf); assert.deepEqual(back.map((p) => p.w), [220, 240, 260, 280, 300, 320]); assert.deepEqual(back.map((p) => p.rot), [0, 0, 0, 0, 0, 0]);
+  await btn(page, 'Select all').click(); await btn(page, 'Delete').click(); assert.ok(await btn(page, 'Save PDF').isDisabled()); assert.match(await page.locator('.og-summary').innerText(), /0 pages will be saved/);
+  await btn(page, 'Delete').click(); assert.ok(await btn(page, 'Save PDF').isEnabled(), 'the same button restores them all');
+  await page.close();
+});
+
+test('PDF Page Organizer: keeps existing page rotation, rejects fake and password-protected PDFs, and hands the result to other tools', async () => {
+  const page = await openTool('organize-pdf');
+  await fileInput(page).first().setInputFiles([buf('fake.pdf', Buffer.from('hello'))]); await root(page).getByText(/not a supported file/).waitFor();
+  await fileInput(page).first().setInputFiles(resolve(here, '../fixtures/encrypted.pdf')); await root(page).getByText(/password-protected/i).first().waitFor({ timeout: 20000 });
+  const d = await PDFDocument.create(); d.addPage([300, 400]).setRotation(degrees(90)); d.addPage([300, 400]);
+  await fileInput(page).first().setInputFiles([buf('rot.pdf', Buffer.from(await d.save()))]); await orgReady(page, 2);
+  await card(page, 0).locator('button[aria-label^="Rotate right"]').click(); await card(page, 1).locator('button[aria-label^="Rotate left"]').click();
+  const out = await orgSave(page); assert.deepEqual((await pagesOf(out.buf)).map((p) => p.rot), [180, 270], 'the page\'s own rotation (90) plus our turn (90) = 180');
+  await root(page).getByRole('button', { name: 'Open in PDF Reader' }).click(); await page.waitForFunction(() => location.hash === '#/tool/pdf-reader');
+  await page.locator('.rd-page canvas').first().waitFor({ timeout: 20000 }); assert.equal(await page.locator('.rd-total').innerText(), 'of 2');
+  await page.goto(`${base}/#/tool/organize-pdf`); await fileInput(page).first().waitFor({ state: 'attached' });
+  await page.getByRole('button', { name: 'Try a sample document' }).click(); await orgReady(page, 2);
+  await btn(page, 'Open another PDF').click(); await page.locator('.dropzone').waitFor({ state: 'visible' }); assert.ok(await root(page).locator('.og-work').isHidden());
+  await page.close();
+});
+
+test('PDF Page Organizer: a dropped PDF is offered "Reorder or rotate pages", and the grid fits a phone screen', async () => {
+  const home = await newPage(); await home.goto(`${base}/#/`); await home.locator('#launcher-input').waitFor({ state: 'attached' });
+  await home.locator('#launcher-input').setInputFiles([buf('r.pdf', await widthsPdf(4))]);
+  await home.locator('#launcher-result').getByRole('button', { name: /Reorder or rotate pages/ }).click();
+  await home.waitForFunction(() => location.hash === '#/tool/organize-pdf'); await orgReady(home, 4); await home.close();
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage(); page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  await page.goto(`${base}/#/tool/organize-pdf`); await fileInput(page).first().waitFor({ state: 'attached' });
+  await fileInput(page).first().setInputFiles([buf('report.pdf', await widthsPdf(6))]); await page.locator('.og-card').nth(5).waitFor({ timeout: 20000 });
+  await page.waitForFunction(() => document.querySelectorAll('.og-img[src^="data:image"]').length >= 2, null, { timeout: 20000 });   // thumbnails near the screen load first; the rest as you scroll
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+  const xs = await page.locator('.og-card').evaluateAll((els) => [...new Set(els.map((e) => Math.round(e.getBoundingClientRect().left)))]); assert.equal(xs.length, 2, 'two columns on a phone');
+  await ctx.close();
+});
+
+test('accessibility: PDF Page Organizer with a document loaded, a selection and a deleted page', async () => {
+  const page = await openTool('organize-pdf'); const bad = [];
+  const scan = async (label) => { await page.evaluate(axeSrc); const res = await page.evaluate(() => axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] } })); for (const v of res.violations) bad.push(`${label}: ${v.id} (${v.impact}) ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`); };
+  await orgOpen(page, 4); await card(page, 1).locator('.og-check').check(); await card(page, 2).locator('button[aria-label^="Delete"]').click(); await btn(page, 'Add blank page').click();
+  await page.waitForTimeout(450); await scan('organizer');
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; }); await page.waitForTimeout(300); await scan('organizer (dark theme)');
   await page.close(); assert.deepEqual(bad, []);
 });
 

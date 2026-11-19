@@ -1,10 +1,10 @@
 # ToolHaven Studio
 
-One polished web app that brings every tool from the `alltools` site, plus a new video compressor, into a single, app-style workspace. All 18 tools run **entirely in the browser**: files are never uploaded.
+One polished web app that brings every tool from the `alltools` site, plus a new video compressor, into a single, app-style workspace. All 19 tools run **entirely in the browser**: files are never uploaded.
 
 | Category | Tools |
 | --- | --- |
-| PDF | **Read**, **Scan to PDF (new)**, Merge, Sign, Split, Compress, PDF to image, Image to PDF |
+| PDF | **Read**, **Scan to PDF**, **Page Organizer (new)**, Merge, Sign, Split, Compress, PDF to image, Image to PDF |
 | Image | Compress, Resize, Crop, Convert format, Image to Base64 |
 | Video | Compress (quality preset or target size, resize, trim, MP4/WebM) |
 | Calculators | BMI, Percentage, Age, Discount |
@@ -14,6 +14,7 @@ One polished web app that brings every tool from the `alltools` site, plus a new
 - **Start with a file**: drop or choose any PDF, image or video on the dashboard (or anywhere on the page) and the app shows what you can do with it. Pick one and the tool opens with your file already loaded.
 - **PDF Reader**: smooth scrolling for long documents (only nearby pages are drawn), zoom and fit modes, pinch to zoom, rotate, search with highlighted matches, page thumbnails, night mode, selectable text, password-protected PDFs, and one-tap hand-off to sign, split, compress or convert the same file.
 - **Scan to PDF**: photograph paper and get a clean, straight PDF. It finds the page edges, corrects the perspective, removes shadows and whitens the paper (or gives crisp black and white), with draggable corner handles, rotate/reorder/delete, page size, margin and quality options, and a ZIP of page images. Pure on-device maths (no OpenCV). On Android, "Take a photo" opens the system camera app, so the app needs no camera permission.
+- **PDF Page Organizer**: thumbnails of every page; rotate, delete (restorable until saved), duplicate and add blank pages; drag to reorder with mouse, finger or keyboard; select all/none, reverse, undo; saves a new PDF and never touches the original.
 - Plain-language task buttons ("Make a PDF smaller", "Shrink a video"), a thumb-friendly bottom bar on phones, and confirmation messages.
 
 - Sidebar workspace with every tool grouped by category, and a responsive mobile drawer
@@ -46,8 +47,8 @@ npm install
 npm run dev        # copies pdf.js font data, then starts Vite
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/
-npm test           # 126 unit tests (calculators, page ranges, file validation, signature placement)
-npm run test:e2e   # 64 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
+npm test           # 136 unit tests (calculators, page ranges, file validation, signature placement)
+npm run test:e2e   # 70 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
 npm run ci         # unit tests, build, then e2e
 ```
 

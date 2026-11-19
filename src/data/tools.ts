@@ -101,6 +101,32 @@ export const TOOLS: Tool[] = [
     search: 'scan scanner camera document photo receipt paper straighten crop perspective black white clean shadows pdf phone',
   },
   {
+    slug: 'organize-pdf', name: 'PDF Page Organizer', category: 'pdf', icon: 'pages',
+    short: 'Rotate, delete, duplicate and drag pages into a new order, with thumbnails.',
+    seoTitle: 'Organize PDF Pages Online: Reorder, Rotate & Delete (Free, Private)',
+    metaDescription: 'Reorder, rotate, delete, duplicate and add blank pages in a PDF with page thumbnails. Drag and drop, free, and your file is never uploaded.',
+    h1: 'Organize PDF Pages Online',
+    intro: 'See every page of your PDF as a thumbnail, then rotate pages, delete the ones you do not want, duplicate or add blank pages, and drag pages into the right order. Save the result as a new PDF. It all happens in your browser, so the document is never uploaded.',
+    local: true,
+    steps: ['Select a PDF, or choose "Try a sample document". Every page appears as a thumbnail.', 'Tap pages to select them, then rotate, delete, duplicate or add a blank page. Each page also has its own buttons.', 'Drag the grip on a page to a new position, or focus it and use the arrow keys. "Reverse order" flips the whole document.', 'Check the summary, choose a file name, then "Save PDF". Download it, or open it straight in the reader or the signer.'],
+    features: ['Thumbnails of every page, drawn as you scroll, so even long PDFs stay fast.', 'Rotate pages left or right, one at a time or many at once.', 'Delete pages and restore them before saving. Deleted pages stay visible until you save.', 'Duplicate pages and add blank pages in the same size as the first page.', 'Drag and drop reordering that works with a mouse, a finger or a pen, plus keyboard control for accessibility.', 'Select all, select none, reverse order and undo all changes.', 'A live summary of what will change, and a new file: your original is never modified.', 'One tap from organizing to reading or signing the result.'],
+    examples: [
+      { title: 'Fix a scan that came in sideways', body: 'Select the sideways pages, choose Rotate right, and save. The rest of the document is untouched.' },
+      { title: 'Cut a contract down to what matters', body: 'Delete the cover letter and appendix pages, drag the signature page to the end, and send a tidy PDF.' },
+      { title: 'Put pages in the right order', body: 'Photographed pages in the wrong order? Drag them into place, or reverse the order if you scanned from the back.' },
+    ],
+    limits: ['Up to 1,000 pages per PDF.', 'Password-protected (encrypted) PDFs cannot be organized. Remove the password first.', 'Bookmarks, form fields and tagged-accessibility structure may not carry over into the new file, as with merging.', 'Page contents, text and images are copied unchanged; nothing is re-compressed.'],
+    faqs: [
+      { q: 'Is my PDF uploaded anywhere?', a: 'No. The pages are read and rebuilt by code running in your browser. Closing the tab discards everything.' },
+      { q: 'Does it change my original file?', a: 'No. It saves a new PDF and leaves the original alone.' },
+      { q: 'Does rotating reduce quality?', a: 'No. Rotation only changes how the page is displayed. The page content is not re-rendered or re-compressed.' },
+      { q: 'How do I reorder pages on a phone?', a: 'Press and drag the grip button on a page. You can also use the arrow keys when the grip is focused.' },
+      { q: 'Can I undo a delete?', a: 'Yes, until you save. Deleted pages stay on screen with a Restore button, and "Undo all changes" resets everything.' },
+    ],
+    related: ['merge-pdf', 'split-pdf', 'pdf-reader', 'sign-pdf'],
+    search: 'organize organise pdf pages reorder rearrange rotate delete remove duplicate blank page thumbnails drag sort',
+  },
+  {
     slug: 'merge-pdf', name: 'PDF Merger', category: 'pdf', icon: 'merge',
     short: 'Combine several PDFs into one document, in the order you choose.',
     seoTitle: 'Merge PDF Files Online (Free, Private)',
@@ -505,7 +531,7 @@ export const toolsByCategory = (c: Category) => TOOLS.filter((t) => t.category =
  * Measured from the real interface; re-measure if you change a tool's initial layout.
  */
 export const TOOL_UI_HEIGHT: Record<string, number> = {
-  'scan-to-pdf': 400, 'pdf-reader': 361, 'merge-pdf': 361, 'sign-pdf': 325, 'split-pdf': 277, 'compress-pdf': 277, 'pdf-to-image': 295, 'image-to-pdf': 361,
+  'scan-to-pdf': 400, 'organize-pdf': 400, 'pdf-reader': 361, 'merge-pdf': 361, 'sign-pdf': 325, 'split-pdf': 277, 'compress-pdf': 277, 'pdf-to-image': 295, 'image-to-pdf': 361,
   'image-compressor': 361, 'image-resizer': 277, 'image-cropper': 277, 'image-converter': 361, 'image-to-base64': 277,
   'video-compressor': 361, 'bmi-calculator': 334, 'percentage-calculator': 1047, 'age-calculator': 150, 'discount-calculator': 585,
 };

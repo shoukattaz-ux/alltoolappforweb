@@ -7,6 +7,7 @@ export interface Suggestion { slug: string; label: string; hint: string; single:
 const PDF: Suggestion[] = [
   { slug: 'pdf-reader', label: 'Read it', hint: 'Open and search the document', single: true },
   { slug: 'sign-pdf', label: 'Sign it', hint: 'Add a signature, date or stamp', single: true },
+  { slug: 'organize-pdf', label: 'Reorder or rotate pages', hint: 'Drag, rotate, delete, add blanks', single: true },
   { slug: 'compress-pdf', label: 'Make it smaller', hint: 'Shrink it for email', single: true },
   { slug: 'split-pdf', label: 'Pull out pages', hint: 'Keep only the pages you need', single: true },
   { slug: 'pdf-to-image', label: 'Turn pages into images', hint: 'Export JPG or PNG', single: true },

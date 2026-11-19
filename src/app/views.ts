@@ -21,7 +21,7 @@ export function home(): string {
     <div class="hero-text">
       <span class="eyebrow">${icon('sparkles', 15)} ${TOOLS.length} tools · zero uploads</span>
       <h1>Every tool you need.<br><span class="grad-text">Private by design.</span></h1>
-      <p class="lead">Read, scan, merge, sign and compress PDFs, compress videos, resize and convert images, and run everyday calculators. It all happens on your device, so your files stay yours.</p>
+      <p class="lead">Read, scan, organize, merge, sign and compress PDFs, compress videos, resize and convert images, and run everyday calculators. It all happens on your device, so your files stay yours.</p>
       <div class="hero-actions">
         <button class="btn btn-primary btn-large" data-open-palette>${icon('search', 18)} Find a tool <kbd>Ctrl K</kbd></button>
         <a class="btn btn-outline-light btn-large" href="#/tools">Browse all tools</a>
