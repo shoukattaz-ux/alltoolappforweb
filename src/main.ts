@@ -5,7 +5,9 @@ import { icon } from './app/icons';
 import { esc, toolHref, catHref } from './app/util';
 import { home, directory, toolShell, bootTool, notFound, privacy } from './app/views';
 import { SITE } from './data/site';
-import { bindLauncher, installGlobalDrop } from './app/launcher';
+import { bindLauncher, installGlobalDrop, offerFiles } from './app/launcher';
+import { isNativeApp } from './scripts/platform';
+import { toast } from './scripts/ui';
 import { clearHandoff } from './scripts/handoff';
 import { initPalette } from './app/palette';
 import { getTheme, setTheme, subscribe, getFavorites } from './app/store';
@@ -106,3 +108,11 @@ window.addEventListener('hashchange', route);
 initPalette();
 installGlobalDrop(() => ((location.hash || '#/').split('?')[0].replace(/^#\/?/, '') === ''), () => view);
 route();
+
+// Android: files that other apps open with, or share to, this app.
+if (isNativeApp()) {
+  void import('./scripts/native').then((n) => n.listenForSharedFiles(
+    (files, info) => { offerFiles(files); toast(`Received ${files.length} file${files.length === 1 ? '' : 's'} from another app${info.failed || info.skipped ? `. ${info.failed + info.skipped} could not be used.` : '.'}`); },
+    (message) => toast(message),
+  ));
+}

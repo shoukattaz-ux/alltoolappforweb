@@ -50,11 +50,23 @@ async function showSuggestions(result: HTMLElement, files: File[]) {
   result.querySelector<HTMLElement>('.act')?.focus({ preventScroll: true });
 }
 
+let pendingOffer: File[] | null = null;
+const onHome = () => (location.hash || '#/').split('?')[0].replace(/^#\/?/, '') === '';
+
+/** Show the "what do you want to do with it?" list for files that came from another app (Open with / Share). Goes to the dashboard first. */
+export function offerFiles(files: File[]) {
+  pendingOffer = files;
+  const result = onHome() ? document.querySelector<HTMLElement>('#launcher-result') : null;
+  if (result) { pendingOffer = null; void showSuggestions(result, files).then(() => result.scrollIntoView({ behavior: 'smooth', block: 'center' })); }
+  else if (!onHome()) location.hash = '#/';
+}
+
 export function bindLauncher(view: HTMLElement) {
   const input = view.querySelector<HTMLInputElement>('#launcher-input');
   const drop = view.querySelector<HTMLElement>('#launcher-drop');
   const result = view.querySelector<HTMLElement>('#launcher-result');
   if (!input || !drop || !result) return;
+  if (pendingOffer) { const f = pendingOffer; pendingOffer = null; void showSuggestions(result, f).then(() => result.scrollIntoView({ behavior: 'smooth', block: 'center' })); }
   const go = (files: File[]) => { if (files.length) void showSuggestions(result, files); };
   input.addEventListener('change', () => { go([...(input.files ?? [])]); input.value = ''; });
   drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('drag'); });

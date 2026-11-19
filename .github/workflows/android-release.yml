@@ -77,7 +77,7 @@ jobs:
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
           export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
-          ./gradlew bundleRelease assembleRelease --no-daemon --stacktrace
+          ./gradlew testDebugUnitTest bundleRelease assembleRelease --no-daemon --stacktrace
 
       - name: Verify the release (signed, correct version, no permissions, not debuggable)
         env:

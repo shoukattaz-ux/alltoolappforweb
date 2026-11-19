@@ -1666,6 +1666,74 @@ test('accessibility: PDF Page Organizer with a document loaded, a selection and 
   await page.close(); assert.deepEqual(bad, []);
 });
 
+
+/* ---------- Android: files opened with / shared to the app (fake native bridge) ---------- */
+/** A browser context that looks like the Android app, and can deliver "shared file" events the way the native plugin does. */
+async function shareContext(queued = null) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await ctx.addInitScript((queued) => {
+    window.androidBridge = {}; window.__listeners = []; window.__queued = queued;
+    window.Capacitor = {
+      isNativePlatform: () => true, getPlatform: () => 'android',
+      convertFileSrc: (u) => u.replace('content://fake/', '/__shared/'),
+      PluginHeaders: [{ name: 'SharedFiles', methods: [{ name: 'addListener', rtype: 'callback' }, { name: 'removeListener', rtype: 'promise' }] }],
+      nativePromise: async () => ({}),
+      // the real plugin keeps an event until a listener exists (retainUntilConsumed), then delivers it
+      nativeCallback: (plugin, method, options, callback) => { if (plugin === 'SharedFiles' && method === 'addListener') { window.__listeners.push(callback); if (window.__queued) { const q = window.__queued; window.__queued = null; setTimeout(() => callback(q), 0); } } return `cb${window.__listeners.length}`; },
+    };
+    window.__fireShared = (payload) => window.__listeners.forEach((cb) => cb(payload));
+  }, queued);
+  return ctx;
+}
+const sharedFile = (n, name, mimeType, size = 100) => ({ uri: `content://fake/${n}`, name, mimeType, size });
+
+test('Android share: a PDF that cold-starts the app is offered the right tools, and the chosen tool opens with that file', async () => {
+  const pdf = await makePdf(3, [612, 792], 'Chapter');
+  const ctx = await shareContext({ files: [sharedFile('doc1', 'contract.pdf', 'application/pdf', pdf.length)], skipped: 0 });
+  await ctx.route('**/__shared/doc1', (r) => r.fulfill({ body: pdf, contentType: 'application/pdf' }));
+  const page = await ctx.newPage(); page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  await page.goto(`${base}/#/tool/age-calculator`);                      // the app was opened somewhere else entirely when the file arrived
+  await page.waitForFunction(() => location.hash === '#/' || location.hash === ''); 
+  await page.locator('#launcher-result').getByText('1 PDF').waitFor({ timeout: 15000 });
+  await page.getByText(/Received 1 file from another app/).waitFor();
+  assert.deepEqual(await page.locator('#launcher-result .act strong').allInnerTexts(), ['Read it', 'Sign it', 'Reorder or rotate pages', 'Make it smaller', 'Pull out pages', 'Turn pages into images']);
+  await page.locator('#launcher-result').getByRole('button', { name: /Read it/ }).click();
+  await page.waitForFunction(() => location.hash === '#/tool/pdf-reader');
+  await page.locator('.rd-page canvas').first().waitFor({ timeout: 20000 }); assert.equal(await page.locator('.rd-total').innerText(), 'of 3');
+  assert.match(await page.locator('.rd-info').innerText(), /contract\.pdf/, 'the shared file keeps its name');
+  await ctx.close();
+});
+
+test('Android share: several files at once (a warm start) keep their names, wrong-type files are reported, and a file that cannot be read gives a clear message', async () => {
+  const a = await makePdf(1), b = await makePdf(2), png = await makeImage(await newPage(), {});
+  const ctx = await shareContext();
+  await ctx.route('**/__shared/a', (r) => r.fulfill({ body: a, contentType: 'application/pdf' }));
+  await ctx.route('**/__shared/b', (r) => r.fulfill({ body: b, contentType: 'application/pdf' }));
+  await ctx.route('**/__shared/p', (r) => r.fulfill({ body: png, contentType: 'image/png' }));
+  await ctx.route('**/__shared/gone', (r) => r.fulfill({ status: 404, body: 'no' }));
+  const page = await ctx.newPage(); page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  await page.goto(`${base}/#/`); await page.locator('#launcher-input').waitFor({ state: 'attached' });
+  await page.evaluate((files) => window.__fireShared({ files, skipped: 0 }), [sharedFile('a', 'first.pdf', 'application/pdf'), sharedFile('b', 'second.pdf', 'application/pdf'), sharedFile('p', 'photo.png', 'image/png'), sharedFile('gone', 'missing.pdf', 'application/pdf')]);
+  await page.locator('#launcher-result').getByText('2 PDFs').waitFor({ timeout: 15000 });
+  assert.match(await page.locator('#launcher-result').innerText(), /1 file was left out/);
+  assert.match(await page.locator('.toast').first().innerText(), /Received 3 files from another app\. 1 could not be used\./);
+  await page.locator('#launcher-result').getByRole('button', { name: /Combine PDFs/ }).click();
+  await page.waitForFunction(() => location.hash === '#/tool/merge-pdf');
+  await page.waitForFunction(() => document.querySelectorAll('#tool-root .file-item').length === 2, null, { timeout: 15000 });
+  assert.deepEqual(await page.locator('#tool-root .fname').allInnerTexts(), ['first.pdf', 'second.pdf']);
+  // every file unreadable: a message, and nothing breaks
+  await page.evaluate((files) => window.__fireShared({ files }), [sharedFile('gone', 'missing.pdf', 'application/pdf')]);
+  await page.getByText(/shared file could not be opened/).waitFor({ timeout: 10000 });
+  assert.match(page.url(), /merge-pdf/, 'a failed share does not move you away from what you were doing');
+  await ctx.close();
+});
+
+test('Android share: the web build has no native bridge and shows nothing about shared files', async () => {
+  const page = await newPage(); await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
+  assert.equal(await page.evaluate(() => typeof window.Capacitor), 'undefined', 'no native bridge on the web');
+  assert.equal(await page.locator('.toast').count(), 0); await page.close();
+});
+
 /* ---------- runner ---------- */
 let failed = 0;
 const only = process.argv[2];

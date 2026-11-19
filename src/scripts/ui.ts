@@ -2,6 +2,7 @@
 import { validateFiles, KIND_LABEL, type FileKind, type ValidatedFile } from '../lib/files';
 import { formatBytes } from '../lib/format';
 import { takeHandoff } from './handoff';
+import { isNativeApp } from './platform';
 
 type Child = Node | string | number | null | undefined | false;
 export type Props = Record<string, unknown> | null;
@@ -94,7 +95,7 @@ export function toast(message: string) {
 
 export function downloadBlob(blob: Blob, filename: string) {
   // Inside the Android app WebView cannot download, so the file goes through the native save/share sheet instead.
-  if ((window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()) {
+  if (isNativeApp()) {
     void import('./native').then((m) => m.saveNative(blob, filename)).catch((e) => toast(`Could not save the file: ${e instanceof Error ? e.message : 'unknown error'}`));
     return;
   }

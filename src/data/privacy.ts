@@ -23,6 +23,7 @@ export function privacyHtml(site: PrivacySite): string {
     </ul>
     <h2>Your files</h2>
     <p>When you choose a PDF, image or video, the app reads it into memory on your own device, produces the result there, and hands it back to you to save or share. Nothing is sent to us or anyone else. On the web, the page is also locked down technically: its Content Security Policy only permits connections back to the site itself. In the Android app there is no network permission at all. Closing the app or the tab discards everything held in memory. Files you save or share are kept by your device wherever you choose, and those copies are yours to manage.</p>
+    <p>If you choose ToolHaven from another app's "Open with" or Share menu, Android lets ToolHaven read only that file, only for as long as it is needed. The app reads it on your device and does not copy it anywhere.</p>
     <p>Scan to PDF finds the page in your photo, straightens it and builds the PDF on your device. "Take a photo" opens your phone's own camera app, which takes the picture and hands it back: this app never accesses the camera itself and asks for no camera permission.</p>
     <p>The video compressor uses your device's built-in video engine, which may use its hardware encoder. That also happens locally. In the Android app, a finished file is briefly written to the app's private cache so it can be handed to Android's share sheet, and it is cleared the next time you save a file.</p>
     <h2>What is stored on your device</h2>

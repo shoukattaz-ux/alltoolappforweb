@@ -15,6 +15,7 @@ One polished web app that brings every tool from the `alltools` site, plus a new
 - **PDF Reader**: smooth scrolling for long documents (only nearby pages are drawn), zoom and fit modes, pinch to zoom, rotate, search with highlighted matches, page thumbnails, night mode, selectable text, password-protected PDFs, and one-tap hand-off to sign, split, compress or convert the same file.
 - **Scan to PDF**: photograph paper and get a clean, straight PDF. It finds the page edges, corrects the perspective, removes shadows and whitens the paper (or gives crisp black and white), with draggable corner handles, rotate/reorder/delete, page size, margin and quality options, and a ZIP of page images. Pure on-device maths (no OpenCV). On Android, "Take a photo" opens the system camera app, so the app needs no camera permission.
 - **PDF Page Organizer**: thumbnails of every page; rotate, delete (restorable until saved), duplicate and add blank pages; drag to reorder with mouse, finger or keyboard; select all/none, reverse, undo; saves a new PDF and never touches the original.
+- **Open with / Share (Android)**: ToolHaven shows up in other apps' "Open with" and Share menus for PDFs, images and videos (file manager, WhatsApp, Gmail...), and offers the right tools for the file. No copy is made and no permission is needed.
 - Plain-language task buttons ("Make a PDF smaller", "Shrink a video"), a thumb-friendly bottom bar on phones, and confirmation messages.
 
 - Sidebar workspace with every tool grouped by category, and a responsive mobile drawer
@@ -47,8 +48,8 @@ npm install
 npm run dev        # copies pdf.js font data, then starts Vite
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/
-npm test           # 136 unit tests (calculators, page ranges, file validation, signature placement)
-npm run test:e2e   # 70 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
+npm test           # 140 unit tests (calculators, page ranges, file validation, signature placement)
+npm run test:e2e   # 73 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
 npm run ci         # unit tests, build, then e2e
 ```
 
