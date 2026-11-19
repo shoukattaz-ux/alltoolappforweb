@@ -29,18 +29,21 @@ GitHub Actions builds the same APK on every push and pull request (`.github/work
 | Name | `appName` in `capacitor.config.ts`, then `app_name` in `android/app/src/main/res/values/strings.xml` |
 | Package id | `appId` in `capacitor.config.ts` and `applicationId`/`namespace` in `android/app/build.gradle`. **Choose it before your first Play Store upload: it can never change afterwards.** |
 | Icons and splash | `npm run android:assets` (regenerates them from the logo; `SITE_NAME=Acme` rebrands) |
-| Version | `versionCode` (must increase with every upload) and `versionName` in `android/app/build.gradle` |
+| Version | `VERSION_CODE` and `VERSION_NAME` environment variables (the release workflow sets them for you) |
 
 After any web change run `npm run android:sync` so the APK contains it.
 
 ## Releasing on Google Play
 
-1. Pick the final `appId` and brand name (see above).
-2. Create an upload keystore and keep it, and its passwords, somewhere safe. Losing it blocks future updates:
-   `keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000`
-3. Add a `signingConfigs.release` block to `android/app/build.gradle` that reads the keystore path and passwords from environment variables or `~/.gradle/gradle.properties` (never commit them).
-4. Build the Play bundle: `cd android && ./gradlew bundleRelease` and upload `app/build/outputs/bundle/release/app-release.aab`.
-5. In Play Console: the Data safety form can truthfully say the app collects no data and shares none; the privacy policy URL is the deployed `#/privacy` page. Test on a few real devices first, including a low-end one with video.
+The full, ordered checklist is in [PLAY-STORE.md](PLAY-STORE.md). In short: create a developer account, create an upload key and add four GitHub secrets, publish the privacy-policy page, run the **Android release** workflow to get a signed `.aab`, then create the app in Play Console and upload it to a closed-test track first.
+
+Locally, a signed release build reads the key from environment variables (never from the repo):
+
+```bash
+export ANDROID_KEYSTORE_PATH=/path/to/upload.jks ANDROID_KEYSTORE_PASSWORD=... ANDROID_KEY_ALIAS=upload ANDROID_KEY_PASSWORD=...
+export VERSION_CODE=2 VERSION_NAME=1.0.1     # VERSION_CODE must increase with every upload
+npm run android:release                      # AAB: android/app/build/outputs/bundle/release/app-release.aab
+```
 
 ## Known limits
 

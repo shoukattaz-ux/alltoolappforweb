@@ -17,7 +17,10 @@
     "android:debug": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "test": "vitest run",
     "test:e2e": "node tests/e2e/run.mjs",
-    "ci": "npm run test && npm run build && npm run test:e2e"
+    "ci": "npm run test && npm run build && npm run test:e2e",
+    "site": "node scripts/make-site.mjs",
+    "store:assets": "node scripts/make-store-assets.mjs",
+    "android:release": "npm run android:sync && cd android && ./gradlew bundleRelease assembleRelease"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",

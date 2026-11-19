@@ -29,7 +29,7 @@ One polished web app that brings every tool from the `alltools` site, plus a new
 
 ## Android app
 
-The same code ships as a native Android app via [Capacitor](https://capacitorjs.com) (`android/`). It declares **no permissions, not even `INTERNET`**, so Android itself keeps your files on the device. Downloads open the system share sheet (Save to Files, Drive, WhatsApp, ...). Build a debug APK with `npm run android:debug`; GitHub Actions also builds it on every push. Full guide, including Play Store release steps: [docs/ANDROID.md](docs/ANDROID.md).
+The same code ships as a native Android app via [Capacitor](https://capacitorjs.com) (`android/`). It declares **no permissions, not even `INTERNET`**, so Android itself keeps your files on the device. Downloads open the system share sheet (Save to Files, Drive, WhatsApp, ...). Build a debug APK with `npm run android:debug`; GitHub Actions also builds it on every push. Guides: [docs/ANDROID.md](docs/ANDROID.md) (building) and [docs/PLAY-STORE.md](docs/PLAY-STORE.md) (publishing on Google Play: signing key, privacy-policy page, store listing, graphics and declarations). `store/` holds the ready-made listing text, icon, feature graphic and screenshots.
 
 ## Branding, preview image and deploy settings
 
@@ -45,7 +45,7 @@ npm install
 npm run dev        # copies pdf.js font data, then starts Vite
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/
-npm test           # 88 unit tests (calculators, page ranges, file validation, signature placement)
+npm test           # 97 unit tests (calculators, page ranges, file validation, signature placement)
 npm run test:e2e   # 56 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
 npm run ci         # unit tests, build, then e2e
 ```
