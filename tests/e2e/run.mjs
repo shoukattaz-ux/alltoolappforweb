@@ -260,6 +260,7 @@ test('app: mobile layout has no horizontal overflow and the menu drawer opens an
   assert.equal(await page.locator('#menu-btn').getAttribute('aria-expanded'), 'true');
   await page.locator('#nav .tool-link', { hasText: 'PDF Merger' }).click();
   await page.waitForFunction(() => location.hash === '#/tool/merge-pdf');
+  await page.waitForFunction(() => document.querySelector('#menu-btn').getAttribute('aria-expanded') === 'false'); // the route handler closes the drawer on the hashchange event, just after the URL changes
   assert.equal(await page.locator('#menu-btn').getAttribute('aria-expanded'), 'false');
   await ctx.close();
 });
@@ -1342,7 +1343,8 @@ test('mobile: a thumb-friendly bottom bar replaces the sidebar, marks the curren
   assert.deepEqual(await bar.locator('.bn-item span').allInnerTexts(), ['Home', 'Tools', 'Search', 'Favorites']);
   assert.equal(await bar.locator('[aria-current="page"]').innerText(), 'Home');
   await bar.getByText('Tools').click();
-  await page.waitForFunction(() => location.hash === '#/tools');
+  // wait for the bar itself to update: the URL changes first, and the app re-renders on the following hashchange event
+  await page.waitForFunction(() => document.querySelector('#bottom-nav [aria-current="page"]')?.textContent.trim() === 'Tools');
   assert.equal(await bar.locator('[aria-current="page"]').innerText(), 'Tools');
   await bar.getByText('Search').click(); await page.locator('.palette-box').waitFor();
   await page.keyboard.press('Escape');
