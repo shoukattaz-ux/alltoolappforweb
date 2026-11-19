@@ -8,6 +8,7 @@ const PDF: Suggestion[] = [
   { slug: 'pdf-reader', label: 'Read it', hint: 'Open and search the document', single: true },
   { slug: 'sign-pdf', label: 'Sign it', hint: 'Add a signature, date or stamp', single: true },
   { slug: 'organize-pdf', label: 'Reorder or rotate pages', hint: 'Drag, rotate, delete, add blanks', single: true },
+  { slug: 'extract-text', label: 'Extract the text', hint: 'OCR: copy text or make it searchable', single: true },
   { slug: 'compress-pdf', label: 'Make it smaller', hint: 'Shrink it for email', single: true },
   { slug: 'split-pdf', label: 'Pull out pages', hint: 'Keep only the pages you need', single: true },
   { slug: 'pdf-to-image', label: 'Turn pages into images', hint: 'Export JPG or PNG', single: true },
@@ -20,6 +21,7 @@ const IMAGE: Suggestion[] = [
   { slug: 'image-converter', label: 'Change format', hint: 'JPG, PNG or WebP', single: false },
   { slug: 'image-to-pdf', label: 'Turn into a PDF', hint: 'One page per image', single: false },
   { slug: 'scan-to-pdf', label: 'Scan as a document', hint: 'Straighten, clean up, make a PDF', single: false },
+  { slug: 'extract-text', label: 'Extract the text', hint: 'OCR: copy text from the picture', single: false },
   { slug: 'image-to-base64', label: 'Encode as Base64', hint: 'For code and data URIs', single: true },
 ];
 const VIDEO: Suggestion[] = [

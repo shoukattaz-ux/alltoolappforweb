@@ -127,6 +127,33 @@ export const TOOLS: Tool[] = [
     search: 'organize organise pdf pages reorder rearrange rotate delete remove duplicate blank page thumbnails drag sort',
   },
   {
+    slug: 'extract-text', name: 'Extract Text (OCR)', category: 'pdf', icon: 'text',
+    short: 'Copy the text from photos, scans and scanned PDFs. Make PDFs searchable.',
+    seoTitle: 'Extract Text from Images & Scanned PDFs (Free OCR, Private)',
+    metaDescription: 'Read text from photos, scans and scanned PDFs with OCR. Copy or download the text, or make a searchable PDF. Runs in your browser: your files are never uploaded.',
+    h1: 'Extract Text from Images and Scans',
+    intro: 'Turn a photo or a scanned page into text you can copy, edit and search. Recognition runs on your device with a bundled engine, so private documents are never uploaded. You can also turn a scanned PDF into a searchable one.',
+    local: true,
+    steps: ['Choose photos of text, a scanned page, or one PDF. Photos from a camera work best when the page is flat, sharp and well lit.', 'Leave "Clean up photos first" on for camera photos: it removes shadows and uneven light. For a PDF you can pick which pages to read.', 'Choose "Recognize text" and wait a few seconds per page. The first time, the engine takes a moment to start.', 'Correct the text if needed, then copy it, download it as a .txt file, or make a searchable PDF.'],
+    features: ['Reads English text from JPG, PNG and WebP photos, or from every page of a scanned PDF.', 'Optional clean-up that removes shadows and whitens the paper before reading, which helps camera photos a lot.', 'Editable text for each page, with a confidence score so you know which pages to double-check.', 'Copy everything to the clipboard or download it as a .txt file.', 'Make a searchable PDF: for a scanned PDF the original pages are kept untouched and invisible text is added on top; for photos the page images are used.', 'Works offline. The recognition engine and the English model are part of the app, and nothing is uploaded.', 'Pairs with Scan to PDF and the PDF Reader: scan a page, read its text, then search it.'],
+    examples: [
+      { title: 'Copy a paragraph from a photo', body: 'Photograph a page of a book or a sign, recognize it, and copy the text into a message or a document.' },
+      { title: 'Make a scanned contract searchable', body: 'Open the scanned PDF here, choose "Make a searchable PDF", then open it in the PDF Reader and search for a clause.' },
+      { title: 'Pull the text out of a receipt', body: 'Scan the receipt with Scan to PDF, then extract its text to paste the totals into a spreadsheet.' },
+    ],
+    limits: ['English only for now. Other languages and scripts (including Arabic and Urdu) are not recognized yet.', 'Handwriting is not supported; this reads printed text.', 'Accuracy depends on the picture: sharp, flat, well-lit pages read best. Low-contrast, tiny or curved text may contain mistakes, so check important numbers.', 'Reading takes a few seconds per page, longer on older phones. Up to 50 pages of a PDF at a time.', 'In a searchable PDF, pages that are rotated in the original PDF keep their appearance but get no text layer.', 'Tables and multi-column layouts are read as plain text; their structure is not kept.'],
+    faqs: [
+      { q: 'Is my document uploaded anywhere?', a: 'No. The recognition engine and the English language data are part of this app and run on your device.' },
+      { q: 'Why is the first run slower?', a: 'The engine (about 10 MB) is loaded and started the first time you use it in a session. After that, each page takes a few seconds.' },
+      { q: 'How accurate is it?', a: 'For clear printed text it is usually very good. Each page shows a confidence score, and you can edit the text before copying it.' },
+      { q: 'What is a searchable PDF?', a: 'A PDF that looks exactly like the scan but has invisible text behind it, so you can search it, select text and copy from it.' },
+      { q: 'Can it read handwriting or other languages?', a: 'Not yet. It reads printed English text.' },
+      { q: 'Why did it find no text?', a: 'The photo may be too blurry, too dark, or the text too small. Try a sharper photo with the page filling the picture, with "Clean up photos first" on.' },
+    ],
+    related: ['scan-to-pdf', 'pdf-reader', 'image-to-pdf', 'compress-pdf'],
+    search: 'ocr extract text recognize read image scan scanned pdf searchable copy text photo picture convert to text',
+  },
+  {
     slug: 'merge-pdf', name: 'PDF Merger', category: 'pdf', icon: 'merge',
     short: 'Combine several PDFs into one document, in the order you choose.',
     seoTitle: 'Merge PDF Files Online (Free, Private)',
@@ -531,7 +558,7 @@ export const toolsByCategory = (c: Category) => TOOLS.filter((t) => t.category =
  * Measured from the real interface; re-measure if you change a tool's initial layout.
  */
 export const TOOL_UI_HEIGHT: Record<string, number> = {
-  'scan-to-pdf': 400, 'organize-pdf': 400, 'pdf-reader': 361, 'merge-pdf': 361, 'sign-pdf': 325, 'split-pdf': 277, 'compress-pdf': 277, 'pdf-to-image': 295, 'image-to-pdf': 361,
+  'scan-to-pdf': 400, 'extract-text': 420, 'organize-pdf': 400, 'pdf-reader': 361, 'merge-pdf': 361, 'sign-pdf': 325, 'split-pdf': 277, 'compress-pdf': 277, 'pdf-to-image': 295, 'image-to-pdf': 361,
   'image-compressor': 361, 'image-resizer': 277, 'image-cropper': 277, 'image-converter': 361, 'image-to-base64': 277,
   'video-compressor': 361, 'bmi-calculator': 334, 'percentage-calculator': 1047, 'age-calculator': 150, 'discount-calculator': 585,
 };

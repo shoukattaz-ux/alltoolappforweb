@@ -114,7 +114,7 @@ export function mount(root: HTMLElement) {
     const searchCount = h('span', { class: 'rd-count', 'aria-live': 'polite' });
     const hitPrev = btn('Previous match', 'up', () => stepMatch(-1)); const hitNext = btn('Next match', 'down', () => stepMatch(1));
     hitPrev.disabled = hitNext.disabled = true;
-    const more = selectControl([['', 'Do more with this PDF…'], ['sign-pdf', 'Sign it'], ['split-pdf', 'Pull out pages'], ['compress-pdf', 'Make it smaller'], ['pdf-to-image', 'Turn pages into images'], ['merge-pdf', 'Combine with other PDFs']], '');
+    const more = selectControl([['', 'Do more with this PDF…'], ['sign-pdf', 'Sign it'], ['organize-pdf', 'Reorder or rotate pages'], ['extract-text', 'Extract the text (OCR)'], ['split-pdf', 'Pull out pages'], ['compress-pdf', 'Make it smaller'], ['pdf-to-image', 'Turn pages into images'], ['merge-pdf', 'Combine with other PDFs']], '');
     more.setAttribute('aria-label', 'Do more with this PDF'); more.className = 'rd-more';
     more.addEventListener('change', () => { if (more.value) { setHandoff([file]); location.hash = `#/tool/${more.value}`; } });
     const closeBtn = h('button', { type: 'button', class: 'btn btn-secondary btn-small' }, 'Open another PDF');

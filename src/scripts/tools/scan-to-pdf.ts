@@ -273,8 +273,9 @@ export function mount(root: HTMLElement) {
     if (!lastPdf) return; const f = lastPdf;
     const dl = h('button', { type: 'button', class: 'btn btn-primary', onclick: () => downloadBlob(f, f.name) }, 'Download PDF');
     const read = h('button', { type: 'button', class: 'btn btn-secondary', onclick: () => { setHandoff([f]); location.hash = '#/tool/pdf-reader'; } }, 'Open in PDF Reader');
+    const ocr = h('button', { type: 'button', class: 'btn btn-secondary', onclick: () => { setHandoff([f]); location.hash = '#/tool/extract-text'; } }, 'Extract the text (OCR)');
     const zip = h('button', { type: 'button', class: 'btn btn-secondary', onclick: () => withBusy(zip, 'Building ZIP…', () => zipAndDownload(lastImages, `${safeBaseName(f.name, 'scan')}-pages.zip`)) }, 'Download pages as images');
-    result.replaceChildren(h('div', { class: 'notice notice-success', role: 'status' }, h('span', { text: `Your ${pages.length}-page PDF is ready (${formatBytes(f.size)}).` })), h('div', { class: 'actions' }, dl, read, zip)); result.hidden = false;
+    result.replaceChildren(h('div', { class: 'notice notice-success', role: 'status' }, h('span', { text: `Your ${pages.length}-page PDF is ready (${formatBytes(f.size)}).` })), h('div', { class: 'actions' }, dl, read, ocr, zip)); result.hidden = false;
   }
 
   root.closest('.tool-panel')?.classList.add('rd-panel');

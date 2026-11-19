@@ -37,3 +37,11 @@ describe('Android "Open with" and "Share" wiring', () => {
     expect(java).toContain('data.put("files"'); expect(java).toContain('data.put("skipped"');
   });
 });
+
+describe('OCR assets survive the Android build', () => {
+  it('the model is shipped uncompressed under its plain name, because Android\'s asset merge strips and decompresses .gz files', () => {
+    const copy = read('scripts/copy-ocr-assets.mjs'); const tool = read('src/scripts/tools/extract-text.ts');
+    expect(copy).toMatch(/gunzipSync/); expect(copy).toContain("'lang/eng.traineddata'"); expect(copy).not.toMatch(/'lang\/eng\.traineddata\.gz'/);
+    expect(tool).toMatch(/gzip: false/); expect(tool).toMatch(/langPath: '\/ocr\/lang'/);
+  });
+});

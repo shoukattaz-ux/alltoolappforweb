@@ -4,7 +4,7 @@ import { chromium } from 'playwright-core';
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import JSZip from 'jszip';
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startServer } from './server.mjs';
@@ -76,7 +76,7 @@ const isPdf = (b) => b.subarray(0, 5).toString() === '%PDF-';
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 /* ---------- App shell tests ---------- */
-const ALL_TOOLS = ['organize-pdf', 'scan-to-pdf', 'pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
+const ALL_TOOLS = ['extract-text', 'organize-pdf', 'scan-to-pdf', 'pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
 const axeSrc = readFileSync(resolve(here, '../../node_modules/axe-core/axe.min.js'), 'utf8');
 
 test('app: every route mounts with one h1, no console errors, and all form controls are labelled', async () => {
@@ -97,12 +97,12 @@ test('app: every route mounts with one h1, no console errors, and all form contr
   await page.close();
 });
 
-test('app: dashboard lists all 19 tools; sidebar links every tool and marks the current one', async () => {
+test('app: dashboard lists all 20 tools; sidebar links every tool and marks the current one', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/`);
   await page.locator('.hero h1').waitFor();
-  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 19); // category sections only (favorites/recents may add more)
-  assert.equal(await page.locator('#nav .tool-link').count(), 19);
+  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 20); // category sections only (favorites/recents may add more)
+  assert.equal(await page.locator('#nav .tool-link').count(), 20);
   await page.goto(`${base}/#/tool/image-resizer`);
   await page.locator('#view h1').waitFor();
   assert.equal(await page.locator('#nav [aria-current="page"]').innerText().then((s) => s.trim()), 'Image Resizer');
@@ -115,7 +115,7 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
   await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
   await page.keyboard.press('Control+k');
   await page.locator('.palette-box').waitFor();
-  assert.equal(await page.locator('#pal-list li').count(), 19);
+  assert.equal(await page.locator('#pal-list li').count(), 20);
   await page.keyboard.type('pdf');
   const n = await page.locator('#pal-list li[data-i]').count();
   assert.ok(n >= 6, `pdf matches ${n}`);
@@ -136,8 +136,8 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
 test('app: directory tabs and live filter work, and the filter is kept in the URL', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/tools`); await page.locator('#dir-q').waitFor();
-  assert.equal(await page.locator('#dir-grid .tcard').count(), 19);
-  await page.goto(`${base}/#/pdf`); assert.equal(await page.locator('#dir-grid .tcard').count(), 9);
+  assert.equal(await page.locator('#dir-grid .tcard').count(), 20);
+  await page.goto(`${base}/#/pdf`); assert.equal(await page.locator('#dir-grid .tcard').count(), 10);
   await page.goto(`${base}/#/image`); assert.equal(await page.locator('#dir-grid .tcard').count(), 5);
   await page.goto(`${base}/#/video`); assert.equal(await page.locator('#dir-grid .tcard').count(), 1);
   await page.goto(`${base}/#/calculator`); assert.equal(await page.locator('#dir-grid .tcard').count(), 4);
@@ -191,7 +191,7 @@ test('security: CSP and hardening headers ship, and the CSP blocks inline script
   const dist = readFileSync(resolve(here, '../../dist/_headers'), 'utf8');
   for (const h of ['Content-Security-Policy', 'Strict-Transport-Security', 'X-Content-Type-Options: nosniff', 'X-Frame-Options: DENY', 'Referrer-Policy', 'Permissions-Policy', 'Cross-Origin-Opener-Policy']) assert.ok(dist.includes(h), `${h} missing from dist/_headers`);
   const csp = /Content-Security-Policy: (.+)/.exec(dist)[1];
-  assert.match(csp, /script-src 'self'(;|$)/); assert.doesNotMatch(csp, /unsafe-eval|script-src[^;]*unsafe-inline/);
+  assert.match(csp, /script-src 'self' 'wasm-unsafe-eval'(;|$)/); assert.doesNotMatch(csp.replace(/'wasm-unsafe-eval'/g, ''), /unsafe-eval|script-src[^;]*unsafe-inline/); // WebAssembly (OCR) is allowed; JavaScript eval is not
   assert.match(csp, /connect-src 'self' blob: data:/); assert.match(csp, /frame-ancestors 'none'/); assert.match(csp, /object-src 'none'/);
   assert.equal((readFileSync(resolve(here, '../../dist/index.html'), 'utf8').match(/<script(?![^>]*\ssrc=)[^>]*>/g) ?? []).length, 0, 'inline <script> in index.html');
   const page = await newPage();
@@ -1277,7 +1277,7 @@ test('launcher: a dropped PDF offers the right tools, and the chosen tool opens 
   const res = page.locator('#launcher-result');
   await res.getByText('1 PDF').waitFor();
   const labels = await res.locator('.act strong').allInnerTexts();
-  assert.deepEqual(labels, ['Read it', 'Sign it', 'Reorder or rotate pages', 'Make it smaller', 'Pull out pages', 'Turn pages into images']);
+  assert.deepEqual(labels, ['Read it', 'Sign it', 'Reorder or rotate pages', 'Extract the text', 'Make it smaller', 'Pull out pages', 'Turn pages into images']);
   await res.getByRole('button', { name: /Make it smaller/ }).click();
   await page.waitForFunction(() => location.hash === '#/tool/compress-pdf');
   await page.locator('#tool-root').getByText(/3 pages/).waitFor({ timeout: 15000 });
@@ -1696,7 +1696,7 @@ test('Android share: a PDF that cold-starts the app is offered the right tools, 
   await page.waitForFunction(() => location.hash === '#/' || location.hash === ''); 
   await page.locator('#launcher-result').getByText('1 PDF').waitFor({ timeout: 15000 });
   await page.getByText(/Received 1 file from another app/).waitFor();
-  assert.deepEqual(await page.locator('#launcher-result .act strong').allInnerTexts(), ['Read it', 'Sign it', 'Reorder or rotate pages', 'Make it smaller', 'Pull out pages', 'Turn pages into images']);
+  assert.deepEqual(await page.locator('#launcher-result .act strong').allInnerTexts(), ['Read it', 'Sign it', 'Reorder or rotate pages', 'Extract the text', 'Make it smaller', 'Pull out pages', 'Turn pages into images']);
   await page.locator('#launcher-result').getByRole('button', { name: /Read it/ }).click();
   await page.waitForFunction(() => location.hash === '#/tool/pdf-reader');
   await page.locator('.rd-page canvas').first().waitFor({ timeout: 20000 }); assert.equal(await page.locator('.rd-total').innerText(), 'of 3');
@@ -1732,6 +1732,107 @@ test('Android share: the web build has no native bridge and shows nothing about 
   const page = await newPage(); await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
   assert.equal(await page.evaluate(() => typeof window.Capacitor), 'undefined', 'no native bridge on the web');
   assert.equal(await page.locator('.toast').count(), 0); await page.close();
+});
+
+
+/* ---------- Extract Text (OCR) ---------- */
+/** A clean image of three lines of printed text, as PNG bytes. */
+async function makeTextImage(page) {
+  const b64 = await page.evaluate(async () => {
+    const c = document.createElement('canvas'); c.width = 1200; c.height = 420; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 1200, 420); x.fillStyle = '#111';
+    x.font = '54px Arial'; x.fillText('The quick brown fox jumps', 40, 110); x.fillText('over the lazy dog 12345.', 40, 200); x.font = '36px Georgia'; x.fillText('Invoice total: $1,284.50 due on 2026-12-01', 40, 300);
+    const blob = await new Promise((r) => c.toBlob(r)); const u = new Uint8Array(await blob.arrayBuffer()); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s);
+  });
+  return Buffer.from(b64, 'base64');
+}
+const ocrRun = async (page) => { await btn(page, 'Recognize text').click(); await page.locator('.ocr-text').first().waitFor({ timeout: 120000 }); };
+
+test('OCR files in the build: engine, cores and an uncompressed model, none of them .gz (Android would drop those)', async () => {
+  const dir = resolve(here, '../../dist/ocr'); const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]));
+  const files = walk(dir).map((f) => f.slice(dir.length + 1)).sort();
+  assert.deepEqual(files, ['core/tesseract-core-lstm.wasm.js', 'core/tesseract-core-simd-lstm.wasm.js', 'lang/eng.traineddata', 'worker.min.js']);
+  assert.ok(files.every((f) => !f.endsWith('.gz')));
+  assert.ok(readFileSync(join(dir, 'lang/eng.traineddata')).length > 4_000_000, 'the model is the full uncompressed file');
+});
+
+test('Extract Text: reads a photo, lets you correct the text, copies and downloads it, and contacts no server', async () => {
+  const page = await openTool('extract-text'); const foreign = [];
+  page.on('request', (r) => { if (!r.url().startsWith(base) && !r.url().startsWith('blob:') && !r.url().startsWith('data:')) foreign.push(r.url()); });
+  await fileInput(page).first().setInputFiles([buf('words.png', await makeTextImage(page))]); assert.ok(await page.getByLabel(/Clean up photos first/).isChecked(), 'clean-up is on by default for photos');
+  await ocrRun(page);
+  const text = await page.locator('.ocr-text').first().inputValue();
+  assert.match(text, /quick brown fox/i); assert.match(text, /lazy dog 12345/i); assert.match(text, /1,284\.50/); assert.match(await page.locator('.ocr-out .notice').first().innerText(), /Read 1 page: \d+ words, about \d+% confident/);
+  await page.locator('.ocr-text').first().fill(text + '\nEdited line'); // the text can be corrected before it is copied
+  await btn(page, 'Copy all text').click(); await page.getByText('Text copied to the clipboard.').waitFor(); assert.equal(await page.evaluate(() => navigator.clipboard.readText()), text + '\nEdited line');
+  const dl = await download(page, () => btn(page, 'Download as .txt').click()); assert.equal(dl.name, 'words.txt'); assert.equal(dl.buf.toString('utf8'), text + '\nEdited line');
+  assert.deepEqual(foreign, [], 'the engine and its language data come from the app itself');
+  await page.close();
+});
+
+test('Extract Text: a camera-style photo with shadows is read after the clean-up step', async () => {
+  const page = await openTool('extract-text');
+  await fileInput(page).first().setInputFiles([buf('desk.jpg', await makeScanPhoto(page))]); await ocrRun(page);
+  const text = await page.locator('.ocr-text').first().inputValue();
+  assert.ok((text.match(/consulting/gi) ?? []).length >= 10, `most of the 26 lines were read (found ${(text.match(/consulting/gi) ?? []).length} "consulting")`); assert.match(text, /quarterly/i);
+  await page.close();
+});
+
+test('Extract Text: a PDF page range is read, and an image-only PDF becomes searchable in the reader', async () => {
+  const host = await newPage(); const png = await makeTextImage(host); await host.close();
+  // An image-only PDF ("a scan"): two pages, each just a picture of text, no text layer at all.
+  const d = await PDFDocument.create(); const img = await d.embedPng(png); for (let i = 0; i < 2; i++) { const p = d.addPage([612, 216]); p.drawImage(img, { x: 6, y: 6, width: 600, height: 210 }); }
+  const scanned = Buffer.from(await d.save());
+  // Before OCR the reader finds nothing to search.
+  const reader = await openTool('pdf-reader'); await fileInput(reader).first().setInputFiles([buf('scan.pdf', scanned)]); await reader.locator('.rd-page canvas').first().waitFor({ timeout: 20000 });
+  await reader.locator('.rd-search').fill('lazy'); await reader.getByText(/No searchable text|No matches/).waitFor({ timeout: 15000 }); await reader.close();
+  const page = await openTool('extract-text'); await fileInput(page).first().setInputFiles([buf('scan.pdf', scanned)]);
+  await page.getByText('2 pages').first().waitFor(); assert.ok(!(await page.getByLabel(/Clean up photos first/).isChecked()), 'clean-up is off for a PDF');
+  await page.getByLabel('Pages to read (optional)').fill('2'); await ocrRun(page);
+  assert.equal(await page.locator('.ocr-page').count(), 1); assert.match(await page.locator('.ocr-page summary').first().innerText(), /^Page 2/); assert.match(await page.locator('.ocr-text').first().inputValue(), /lazy dog/i);
+  await page.getByLabel('Pages to read (optional)').fill(''); await ocrRun(page); assert.equal(await page.locator('.ocr-page').count(), 2);
+  assert.match(await page.locator('.ocr-out .actions + * , .ocr-out').first().innerText(), /Page 1[\s\S]*Page 2/);
+  const pdf = await download(page, () => btn(page, 'Make a searchable PDF').click()); assert.equal(pdf.name, 'scan-searchable.pdf'); assert.equal((await PDFDocument.load(pdf.buf)).getPageCount(), 2);
+  await page.getByRole('button', { name: 'Open in PDF Reader' }).click(); await page.waitForFunction(() => location.hash === '#/tool/pdf-reader');
+  await page.locator('.rd-page canvas').first().waitFor({ timeout: 20000 });
+  await page.locator('.rd-search').fill('lazy'); await page.waitForFunction(() => /^\d+ of [2-9]\d*$|^1 of \d+$/.test(document.querySelector('.rd-count').textContent), null, { timeout: 20000 });
+  assert.match(await page.locator('.rd-count').innerText(), /1 of 2/, 'one match per page: the invisible text sits on the picture');
+  await page.locator('.rd-search').fill('1,284.50'); await page.getByText(/1 of 2/).waitFor({ timeout: 15000 });
+  await page.close();
+});
+
+test('Extract Text: a photo run can be canceled, the page stays usable, bad files are rejected, and a PDF replaces photos', async () => {
+  const page = await openTool('extract-text');
+  await fileInput(page).first().setInputFiles([buf('fake.png', Buffer.from('not an image'))]); await root(page).getByText(/not a supported file/).waitFor();
+  const png = await makeTextImage(page); const many = Array.from({ length: 8 }, (_, i) => buf(`p${i}.png`, png));
+  await fileInput(page).first().setInputFiles(many); await page.locator('#tool-root .file-item').nth(7).waitFor(); assert.equal(await page.locator('#tool-root .file-item').count(), 8);
+  await btn(page, 'Recognize text').click(); await page.getByText(/Reading page [2-8]/).first().waitFor({ timeout: 90000 }); await btn(page, 'Cancel').click();
+  await page.getByText(/Canceled/).first().waitFor({ timeout: 15000 }); assert.ok(await btn(page, 'Recognize text').isEnabled(), 'ready to run again after canceling');
+  assert.ok((await page.locator('.ocr-page').count()) < 8, 'only the pages read before canceling are shown');
+  await fileInput(page).first().setInputFiles([buf('doc.pdf', await makePdf(2))]); await page.waitForFunction(() => document.querySelectorAll('#tool-root .file-item').length === 1 && /pages ·/.test(document.querySelector('#tool-root .file-item').textContent), null, { timeout: 15000 }); // a PDF replaces the photos
+  await btn(page, 'Clear').click(); assert.equal(await page.locator('#tool-root .file-item').count(), 0);
+  await page.close();
+});
+
+test('Extract Text: reachable from the launcher, the reader menu and the scanner, and fits a phone screen', async () => {
+  const home = await newPage(); await home.goto(`${base}/#/`); await home.locator('#launcher-input').waitFor({ state: 'attached' });
+  await home.locator('#launcher-input').setInputFiles([buf('t.png', await makeTextImage(home))]);
+  await home.locator('#launcher-result').getByRole('button', { name: /Extract the text/ }).click(); await home.waitForFunction(() => location.hash === '#/tool/extract-text');
+  await home.locator('#tool-root .file-item').waitFor({ timeout: 15000 });
+  await home.goto(`${base}/#/tool/pdf-reader`); await fileInput(home).first().waitFor({ state: 'attached' }); await fileInput(home).first().setInputFiles([buf('r.pdf', await makePdf(2))]); await home.locator('.rd-page canvas').first().waitFor({ timeout: 20000 });
+  await home.locator('.rd-more').selectOption('extract-text'); await home.waitForFunction(() => location.hash === '#/tool/extract-text'); await home.getByText('2 pages').first().waitFor({ timeout: 15000 }); await home.close();
+  const scan = await openTool('scan-to-pdf'); await fileInput(scan).first().setInputFiles([buf('desk.jpg', await makeScanPhoto(scan))]); await scanReady(scan);
+  await btn(scan, 'Create PDF').click(); await root(scan).getByRole('button', { name: 'Extract the text (OCR)' }).click(); await scan.waitForFunction(() => location.hash === '#/tool/extract-text'); await scan.getByText('1 pages').or(scan.getByText('1 page')).first().waitFor({ timeout: 15000 }); await scan.close();
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); const m = await ctx.newPage(); m.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  await m.goto(`${base}/#/tool/extract-text`); await fileInput(m).first().waitFor({ state: 'attached' }); await fileInput(m).first().setInputFiles([buf('words.png', await makeTextImage(m))]); await ocrRun(m);
+  assert.equal(await m.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false); await ctx.close();
+});
+
+test('accessibility: Extract Text with files chosen and with results (light and dark)', async () => {
+  const page = await openTool('extract-text'); const bad = [];
+  const scan = async (label) => { await page.evaluate(axeSrc); const res = await page.evaluate(() => axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] } })); for (const v of res.violations) bad.push(`${label}: ${v.id} (${v.impact}) ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`); };
+  await fileInput(page).first().setInputFiles([buf('words.png', await makeTextImage(page))]); await page.waitForTimeout(450); await scan('before reading'); await ocrRun(page); await page.waitForTimeout(450); await scan('with results');
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; }); await page.waitForTimeout(300); await scan('with results (dark theme)');
+  await page.close(); assert.deepEqual(bad, []);
 });
 
 /* ---------- runner ---------- */

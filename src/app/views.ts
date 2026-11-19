@@ -21,7 +21,7 @@ export function home(): string {
     <div class="hero-text">
       <span class="eyebrow">${icon('sparkles', 15)} ${TOOLS.length} tools · zero uploads</span>
       <h1>Every tool you need.<br><span class="grad-text">Private by design.</span></h1>
-      <p class="lead">Read, scan, organize, merge, sign and compress PDFs, compress videos, resize and convert images, and run everyday calculators. It all happens on your device, so your files stay yours.</p>
+      <p class="lead">Read, scan, copy text from, organize, merge, sign and compress PDFs, compress videos, resize and convert images, and run everyday calculators. It all happens on your device, so your files stay yours.</p>
       <div class="hero-actions">
         <button class="btn btn-primary btn-large" data-open-palette>${icon('search', 18)} Find a tool <kbd>Ctrl K</kbd></button>
         <a class="btn btn-outline-light btn-large" href="#/tools">Browse all tools</a>
@@ -37,7 +37,7 @@ export function home(): string {
   <section class="block tasks-block" aria-labelledby="tasks-h">
     <header class="block-head"><h2 id="tasks-h">${icon('zap', 18)}What do you want to do?</h2></header>
     <ul class="tasks">
-      ${[['pdf-reader', 'Read a PDF'], ['merge-pdf', 'Combine PDFs'], ['sign-pdf', 'Sign a document'], ['compress-pdf', 'Make a PDF smaller'], ['scan-to-pdf', 'Scan a document'], ['video-compressor', 'Shrink a video'], ['image-compressor', 'Make photos smaller'], ['image-resizer', 'Resize a photo']]
+      ${[['pdf-reader', 'Read a PDF'], ['merge-pdf', 'Combine PDFs'], ['sign-pdf', 'Sign a document'], ['organize-pdf', 'Organize PDF pages'], ['compress-pdf', 'Make a PDF smaller'], ['scan-to-pdf', 'Scan a document'], ['extract-text', 'Copy text from a scan'], ['video-compressor', 'Shrink a video'], ['image-compressor', 'Make photos smaller']]
         .map(([s, l]) => { const t = toolBySlug(s)!; return `<li><a class="task cat-${t.category}" href="${toolHref(t)}"><span class="task-icon">${icon(t.icon, 22)}</span><span>${l}</span></a></li>`; }).join('')}
     </ul>
   </section>

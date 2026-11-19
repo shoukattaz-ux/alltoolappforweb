@@ -90,7 +90,14 @@ await page.locator('#tool-root input[type=file]').first().setInputFiles({ name: 
 await page.locator('.sc-preview').waitFor({ state: 'visible', timeout: 30000 }); await page.waitForFunction(() => document.querySelector('.sc-preview')?.width > 0);
 await page.waitForTimeout(900); await page.evaluate(() => { const t = document.querySelector('.sc-preview-box').getBoundingClientRect().top + window.scrollY - 150; window.scrollTo(0, Math.max(0, t)); }); await snap('phone-4-scan-to-pdf.png');
 
-// 5. Video compressor with a clip loaded
+// 5. Extract text (OCR): a clean picture of text, recognised on the device
+await page.goto(`${base}#/tool/extract-text`); await page.locator('input[type=file]').first().waitFor({ state: 'attached' });
+const textPng = await page.evaluate(async () => { const c = document.createElement('canvas'); c.width = 1200; c.height = 420; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 1200, 420); x.fillStyle = '#111'; x.font = '54px Arial'; x.fillText('Meeting notes: Friday', 40, 110); x.fillText('Send the invoice by noon.', 40, 200); x.font = '36px Georgia'; x.fillText('Total due on Friday: 480 dollars', 40, 300); const blob = await new Promise((r) => c.toBlob(r)); const u = new Uint8Array(await blob.arrayBuffer()); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); });
+await page.locator('#tool-root input[type=file]').first().setInputFiles({ name: 'notes.png', mimeType: 'image/png', buffer: Buffer.from(textPng, 'base64') });
+await page.getByRole('button', { name: 'Recognize text' }).click(); await page.locator('.ocr-text').first().waitFor({ timeout: 120000 });
+await page.waitForTimeout(600); await page.evaluate(() => { const t = document.querySelector('.ocr-out').getBoundingClientRect().top + window.scrollY - 150; window.scrollTo(0, Math.max(0, t)); }); await snap('phone-5-extract-text.png');
+
+// 6. Video compressor with a clip loaded
 await page.goto(`${base}#/tool/video-compressor`); await page.locator('input[type=file]').waitFor({ state: 'attached' });
 const clip = await page.evaluate(async () => {
   const c = document.createElement('canvas'); c.width = 1280; c.height = 720; const x = c.getContext('2d'); const s = c.captureStream(30);
@@ -99,9 +106,9 @@ const clip = await page.evaluate(async () => {
   r.stop(); await done; const u = new Uint8Array(await new Blob(ch).arrayBuffer()); let q = ''; for (let i = 0; i < u.length; i += 0x8000) q += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(q);
 });
 await page.locator('input[type=file]').setInputFiles({ name: 'holiday.webm', mimeType: 'video/webm', buffer: Buffer.from(clip, 'base64') });
-await page.locator('.video-info').waitFor({ timeout: 30000 }); await page.evaluate(() => { document.querySelector('.video-info').scrollIntoView({ block: 'start' }); window.scrollBy(0, -84); }); await snap('phone-5-video-compressor.png');
+await page.locator('.video-info').waitFor({ timeout: 30000 }); await page.evaluate(() => { document.querySelector('.video-info').scrollIntoView({ block: 'start' }); window.scrollBy(0, -84); }); await snap('phone-6-video-compressor.png');
 
-// 6. Image compressor result
+// 7. Image compressor result
 await page.goto(`${base}#/tool/image-compressor`); await page.locator('input[type=file]').waitFor({ state: 'attached' });
 const photo = await page.evaluate(async () => {
   const c = document.createElement('canvas'); c.width = 2000; c.height = 1400; const x = c.getContext('2d');
@@ -113,10 +120,10 @@ const photo = await page.evaluate(async () => {
 await page.locator('input[type=file]').setInputFiles({ name: 'sunset.png', mimeType: 'image/png', buffer: Buffer.from(photo, 'base64') });
 await page.locator('#tool-root select').first().selectOption('jpeg');
 await page.getByRole('button', { name: 'Compress images' }).click(); await page.locator('#tool-root table').waitFor({ timeout: 20000 });
-await page.evaluate(() => { document.querySelector('#tool-root .notice').scrollIntoView({ block: 'center' }); }); await snap('phone-6-image-compressor.png');
+await page.evaluate(() => { document.querySelector('#tool-root .notice').scrollIntoView({ block: 'center' }); }); await snap('phone-7-image-compressor.png');
 
-// 7. All tools
-await page.goto(`${base}#/tools`); await page.locator('#dir-grid .tcard').first().waitFor(); await snap('phone-7-all-tools.png');
+// 8. All tools
+await page.goto(`${base}#/tools`); await page.locator('#dir-grid .tcard').first().waitFor(); await snap('phone-8-all-tools.png');
 
 await ctx.close(); await browser.close(); server.close();
 console.log('Play Store graphics written to store/');
