@@ -209,6 +209,36 @@ test('security: CSP and hardening headers ship, and the CSP blocks inline script
   await page.close();
 });
 
+test('privacy page: reachable from the sidebar and footer, and its claims match what the app really does', async () => {
+  const page = await newPage();
+  await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
+  await page.locator('#sidebar a.privacy-card').click();
+  await page.waitForFunction(() => location.hash === '#/privacy');
+  await page.getByRole('heading', { name: 'Privacy', level: 1 }).waitFor();
+  const text = await page.locator('#view article').innerText();
+  for (const claim of [/never uploaded/i, /no cookies/i, /no analytics/i, /Last updated: \d{1,2} \w+ \d{4}/, /Saved signatures/, /Favorites and recently used/]) assert.match(text, claim);
+  assert.ok(await page.locator('.app-foot a[href="#/privacy"]').isVisible());
+  assert.match(await page.title(), /Privacy/);
+  // Claim check: nothing but the declared keys is written to storage by normal use, and no cookies are set.
+  await page.goto(`${base}/#/tool/bmi-calculator`); await page.locator('#fav-btn').click();
+  const stored = await page.evaluate(() => ({ keys: Object.keys(localStorage).sort(), cookies: document.cookie, session: Object.keys(sessionStorage) }));
+  assert.ok(stored.keys.every((k) => ['th:favs', 'th:recent', 'th:theme', 'th-signatures'].includes(k)), `unexpected storage keys: ${stored.keys}`);
+  assert.equal(stored.cookies, ''); assert.deepEqual(stored.session, []);
+  await page.close();
+});
+
+test('metadata: social preview tags and a real 1200x630 preview image ship in the build', async () => {
+  const html = readFileSync(resolve(here, '../../dist/index.html'), 'utf8');
+  for (const tag of ['og:title', 'og:description', 'og:image', 'og:image:alt', 'twitter:card', 'twitter:image', 'description', 'theme-color']) assert.ok(html.includes(`"${tag}"`), `${tag} missing`);
+  assert.match(html, /<title>[^<]{10,70}<\/title>/);
+  const png = readFileSync(resolve(here, '../../dist/og-image.png'));
+  assert.equal(png.subarray(1, 4).toString(), 'PNG');
+  assert.equal(png.readUInt32BE(16), 1200); assert.equal(png.readUInt32BE(20), 630);
+  assert.ok(png.length < 1_000_000, 'preview image should stay under 1 MB');
+  const res = await context.request.get(`${base}/og-image.png`); assert.equal(res.status(), 200); assert.equal(res.headers()['content-type'], 'image/png');
+  assert.ok(readFileSync(resolve(here, '../../dist/robots.txt'), 'utf8').includes('User-agent'));
+});
+
 test('app: unknown routes show a not-found view', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/tool/does-not-exist`);
@@ -257,7 +287,7 @@ test('accessibility: axe-core finds no violations on every view and tool (light 
     const res = await page.evaluate(() => axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] } }));
     for (const v of res.violations) bad.push(`${label}: ${v.id} (${v.impact}) ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`);
   };
-  for (const r of ['', 'tools', 'pdf', 'favorites']) { await page.goto(`${base}/#/${r}`); await page.locator('#view h1').waitFor(); await page.waitForTimeout(450); await scan(`#/${r}`); }
+  for (const r of ['', 'tools', 'pdf', 'video', 'privacy', 'favorites']) { await page.goto(`${base}/#/${r}`); await page.locator('#view h1').waitFor(); await page.waitForTimeout(450); await scan(`#/${r}`); }
   for (const t of ALL_TOOLS) { await page.goto(`${base}/#/tool/${t}`); await page.locator('#tool-root input, #tool-root select').first().waitFor({ state: 'attached' }); await page.waitForTimeout(450); await scan(`light ${t}`); }
   await page.keyboard.press('Control+k'); await page.locator('.palette-box').waitFor(); await page.waitForTimeout(450); await scan('palette'); await page.keyboard.press('Escape');
   await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; });

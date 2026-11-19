@@ -1,6 +1,7 @@
 import { TOOLS, CATEGORIES, toolBySlug, toolsByCategory, type Category } from '../data/tools';
 import { icon } from './icons';
 import { esc, toolHref, catHref, catLabel, searchTools, toolCard } from './util';
+import { SITE } from '../data/site';
 import { getFavorites, getRecents, isFavorite, toggleFavorite, pushRecent } from './store';
 
 const CATS: Category[] = ['pdf', 'image', 'video', 'calculator'];
@@ -131,6 +132,48 @@ export async function bootTool(slug: string, view: HTMLElement) {
     console.error(err); root.removeAttribute('aria-busy');
     root.innerHTML = '<div class="notice notice-error" role="alert"><span>This tool could not be loaded. Check your connection, reload, and try a current version of Chrome, Edge, Firefox or Safari.</span></div>';
   }
+}
+
+export function privacy(): string {
+  const mail = SITE.contactEmail ? `<p>Questions? Email <a href="mailto:${esc(SITE.contactEmail)}">${esc(SITE.contactEmail)}</a>.</p>` : '';
+  return `
+  <header class="page-head">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="#/">Home</a>${icon('chevron', 14)}<span>Privacy</span></nav>
+    <h1>Privacy</h1><p class="lead">${esc(SITE.name)} is built so that your files and data stay with you. Here is exactly what that means.</p>
+  </header>
+  <article class="prose legal">
+    <p class="muted">Last updated: ${esc(SITE.privacyUpdated)}</p>
+    <h2>The short version</h2>
+    <ul class="ticks">
+      <li>Your files are never uploaded. Every tool runs inside your browser.</li>
+      <li>There are no accounts, no cookies, no analytics, no advertising and no third-party scripts.</li>
+      <li>The app remembers a few preferences on your device only, listed below.</li>
+    </ul>
+    <h2>Your files</h2>
+    <p>When you choose a PDF, image or video, your browser reads it into memory on your own device, produces the result there, and hands it back to you as a download. Nothing is sent to us or anyone else. The page is also locked down technically: its Content Security Policy only permits connections back to the site itself, so the tools could not send your files elsewhere even by mistake. Closing or reloading the tab discards everything held in memory. Files you download are saved by your browser wherever you choose, and those copies are yours to manage.</p>
+    <p>The video compressor uses your browser's built-in video engine, which may use your device's hardware encoder. That also happens locally.</p>
+    <h2>What is stored on your device</h2>
+    <p>Using your browser's local storage, and only on your device, the app can keep:</p>
+    <ul>
+      <li><strong>Favorites and recently used tools</strong>, so the dashboard can show them.</li>
+      <li><strong>Your theme</strong> (light or dark).</li>
+      <li><strong>Saved signatures</strong>, only if you tick the option to save one in the PDF Signer.</li>
+    </ul>
+    <p>None of this is transmitted anywhere. You can remove it at any time by clearing this site's data in your browser settings. Saved signatures can also be deleted from inside the PDF Signer. The app sets no cookies.</p>
+    <h2>What the website host can see</h2>
+    <p>Like any website, the server that delivers these pages receives standard technical information when your browser requests them, such as your IP address, the address requested, your browser type and the time. This is used to deliver and secure the site. It never includes the contents of your files, because those never leave your device. Fonts are served from the site itself, not from a third party.</p>
+    <h2>Using the tools</h2>
+    <ul>
+      <li>Results are provided as they are. Keep your original files, especially after compressing video or images, which is lossy.</li>
+      <li>The PDF Signer adds an image of a signature to a PDF. It is not a certificate-based digital signature, and whether it is accepted depends on who you send it to.</li>
+      <li>The calculators are for general information. The BMI result in particular is a screening measure, not medical advice.</li>
+    </ul>
+    <h2>Children</h2>
+    <p>${esc(SITE.name)} is a general-purpose utility. It collects no personal information from anyone, including children.</p>
+    <h2>Changes</h2>
+    <p>If this ever changes, for example if analytics or advertising were added, this page would be updated first and the date above would change.</p>
+    ${mail}
+  </article>`;
 }
 
 export function notFound(): string {

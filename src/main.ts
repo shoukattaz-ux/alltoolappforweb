@@ -3,7 +3,8 @@ import './styles/app.css';
 import { CATEGORIES, toolBySlug, toolsByCategory, type Category } from './data/tools';
 import { icon } from './app/icons';
 import { esc, toolHref, catHref } from './app/util';
-import { home, directory, toolShell, bootTool, notFound } from './app/views';
+import { home, directory, toolShell, bootTool, notFound, privacy } from './app/views';
+import { SITE } from './data/site';
 import { initPalette } from './app/palette';
 import { getTheme, setTheme, subscribe, getFavorites } from './app/store';
 
@@ -17,7 +18,7 @@ app.innerHTML = `
     <button class="search-btn" data-open-palette>${icon('search', 17)}<span>Search tools</span><kbd>Ctrl K</kbd></button>
     <nav id="nav"></nav>
     <div class="side-foot">
-      <div class="privacy-card">${icon('shield', 18)}<div><strong>100% private</strong><span>Files never leave your device.</span></div></div>
+      <a class="privacy-card" href="#/privacy">${icon('shield', 18)}<div><strong>100% private</strong><span>Files never leave your device.</span></div></a>
       <button class="theme-btn" id="theme-btn"></button>
     </div>
   </aside>
@@ -29,7 +30,7 @@ app.innerHTML = `
       <button class="icon-btn" data-open-palette aria-label="Search tools">${icon('search', 20)}</button>
     </header>
     <main id="view" tabindex="-1"></main>
-    <footer class="app-foot">© ${new Date().getFullYear()} ToolHaven · Built for privacy: processed locally, never uploaded.</footer>
+    <footer class="app-foot">© ${new Date().getFullYear()} ${SITE.name} · Built for privacy: processed locally, never uploaded. · <a href="#/privacy">Privacy</a></footer>
   </div>
 </div>`;
 
@@ -60,11 +61,12 @@ function route() {
   const hash = location.hash || '#/';
   const [path, qs = ''] = hash.split('?');
   const q = new URLSearchParams(qs).get('q') ?? '';
-  let title = 'ToolHaven Studio: PDF, image and calculator tools';
+  let title = 'ToolHaven Studio: PDF, video, image and calculator tools';
   setMenu(false);
   const seg = path.replace(/^#\/?/, '');
   if (seg === '') view.innerHTML = home();
   else if (seg === 'tools') { view.innerHTML = directory('all', q); title = 'All tools · ToolHaven'; }
+  else if (seg === 'privacy') { view.innerHTML = privacy(); title = `Privacy · ${SITE.name}`; }
   else if (seg === 'favorites') { view.innerHTML = directory('favorites', q); title = 'Favorites · ToolHaven'; }
   else if ((CATS as string[]).includes(seg)) { view.innerHTML = directory(seg as Category, q); title = `${CATEGORIES[seg as Category].name} · ToolHaven`; }
   else if (seg.startsWith('tool/') && toolBySlug(seg.slice(5))) {

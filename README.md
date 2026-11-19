@@ -23,6 +23,13 @@ One polished web app that brings every tool from the `alltools` site, plus a new
 
 `public/_headers` ships a strict Content-Security-Policy (`script-src 'self'`, `connect-src 'self' blob: data:`, no framing, no plugins), HSTS, `nosniff`, a locked-down Permissions-Policy and COOP. The e2e server enforces the same headers, so every test runs under the real policy, and a test confirms inline scripts and off-origin requests are blocked. If you add analytics or ads, extend the policy deliberately.
 
+## Branding, preview image and deploy settings
+
+- `src/data/site.ts` holds the brand name, an optional contact email (shown on the Privacy page only when set) and the privacy-text date.
+- `npm run og` regenerates the 1200x630 link-preview image (`SITE_NAME=Acme npm run og` to rebrand).
+- Link-preview crawlers need an absolute image URL, so build with your real address: `SITE_URL=https://your-domain.com npm run build`. This makes `og:image`/`twitter:image` absolute and adds a canonical link and `og:url`. Without it the tags stay relative.
+- The Privacy page (`#/privacy`) describes exactly what the app stores; a test fails if the app ever writes anything beyond the documented keys or sets a cookie.
+
 ## Commands
 
 ```bash
@@ -31,7 +38,7 @@ npm run dev        # copies pdf.js font data, then starts Vite
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/
 npm test           # 67 unit tests (calculators, page ranges, file validation, signature placement)
-npm run test:e2e   # 35 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
+npm run test:e2e   # 38 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
 npm run ci         # unit tests, build, then e2e
 ```
 

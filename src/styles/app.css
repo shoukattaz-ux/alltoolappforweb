@@ -34,7 +34,7 @@ kbd { font: 600 .72rem var(--font); padding: 2px 7px; border-radius: 6px; backgr
 .nav-dot { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: var(--cbg); color: var(--c); flex: none; }
 .count { margin-left: auto; font-style: normal; font-size: .75rem; font-weight: 700; background: var(--brand-100); color: var(--brand-700); padding: 1px 8px; border-radius: 99px; }
 .side-foot { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); position: sticky; bottom: 0; background: var(--surface); }
-.privacy-card { display: flex; gap: 10px; align-items: center; padding: 11px 12px; border-radius: 12px; background: var(--ok-bg); color: var(--ok); font-size: .82rem; line-height: 1.35; }
+.privacy-card { text-decoration: none;  display: flex; gap: 10px; align-items: center; padding: 11px 12px; border-radius: 12px; background: var(--ok-bg); color: var(--ok); font-size: .82rem; line-height: 1.35; }
 .privacy-card strong { display: block; font-size: .88rem; } .privacy-card span { opacity: 1; }
 .theme-btn { display: flex; align-items: center; gap: 10px; font: inherit; font-weight: 600; font-size: .9rem; background: transparent; color: var(--ink-2); border: 0; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
 .theme-btn:hover { background: var(--surface-2); color: var(--ink); }
@@ -105,6 +105,8 @@ kbd { font: 600 .72rem var(--font); padding: 2px 7px; border-radius: 6px; backgr
 .tool-main .content-block { max-width: none; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 28px; box-shadow: var(--shadow-xs); }
 .aside-intro { font-size: .92rem; color: var(--ink-2); margin: 0; line-height: 1.6; }
 .side-box h2 { margin-top: 0; }
+
+.app-foot a { font-weight: 600; } .legal .ticks { margin-top: 8px; } .legal h2:first-of-type { margin-top: 1em; }
 
 /* Video compressor */
 .video-info { margin: 18px 0 4px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2); }
