@@ -30,7 +30,17 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
+      # The runner image already ships an Android SDK ($ANDROID_HOME). Use it directly rather than a setup action:
+      # make sure the licenses are accepted and the platform/build-tools this project targets are present.
+      - name: Prepare the Android SDK
+        run: |
+          SDKM="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)"
+          echo "sdkmanager: $SDKM"
+          yes | sudo env "JAVA_HOME=$JAVA_HOME" "$SDKM" --licenses > /dev/null || true
+          for pkg in "platforms;android-36" "build-tools;36.0.0"; do
+            if [ -d "$ANDROID_HOME/$(echo "$pkg" | tr ';' '/')" ]; then echo "already installed: $pkg"
+            else sudo env "JAVA_HOME=$JAVA_HOME" "$SDKM" "$pkg"; fi
+          done
 
       - uses: gradle/actions/setup-gradle@v4
 
@@ -46,7 +56,7 @@ jobs:
 
       - name: Check the APK requests no permissions (no network access)
         run: |
-          BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          BT="$ANDROID_HOME/build-tools/36.0.0"
           "$BT/aapt2" dump permissions android/app/build/outputs/apk/debug/app-debug.apk | tee permissions.txt
           if grep -q "INTERNET" permissions.txt; then echo "::error::The APK requests INTERNET; the privacy promise requires none."; exit 1; fi
 
