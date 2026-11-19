@@ -84,7 +84,19 @@ export async function withBusy<T>(btn: HTMLButtonElement, label: string, job: ()
 
 /* ------------------------------ Downloads ------------------------------ */
 
+/** A brief, non-blocking message (used for errors that have no better place to appear). */
+export function toast(message: string) {
+  const el = h('div', { class: 'toast', role: 'status', text: message });
+  document.body.append(el);
+  setTimeout(() => el.remove(), 5000);
+}
+
 export function downloadBlob(blob: Blob, filename: string) {
+  // Inside the Android app WebView cannot download, so the file goes through the native save/share sheet instead.
+  if ((window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()) {
+    void import('./native').then((m) => m.saveNative(blob, filename)).catch((e) => toast(`Could not save the file: ${e instanceof Error ? e.message : 'unknown error'}`));
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = h('a', { href: url, download: filename, rel: 'noopener' });
   a.style.display = 'none';

@@ -117,6 +117,8 @@ kbd { font: 600 .72rem var(--font); padding: 2px 7px; border-radius: 6px; backgr
 .video-result { margin-top: 18px; } .video-preview { width: 100%; max-height: 460px; border-radius: 16px; background: #000; display: block; }
 :root[data-theme="dark"] .video-estimate { color: var(--ink); }
 
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 120; max-width: min(92vw, 520px); padding: 12px 18px; border-radius: 14px; background: var(--navy-900); color: #fff; font-weight: 600; box-shadow: var(--shadow-lg); animation: rise .25s var(--ease); }
+
 /* Palette */
 .palette { position: fixed; inset: 0; z-index: 100; display: grid; justify-items: center; align-items: start; padding: 12vh 16px 16px; }
 .palette-backdrop { position: absolute; inset: 0; background: rgba(8, 15, 32, .55); backdrop-filter: blur(6px); animation: fade .15s; }

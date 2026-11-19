@@ -23,6 +23,10 @@ One polished web app that brings every tool from the `alltools` site, plus a new
 
 `public/_headers` ships a strict Content-Security-Policy (`script-src 'self'`, `connect-src 'self' blob: data:`, no framing, no plugins), HSTS, `nosniff`, a locked-down Permissions-Policy and COOP. The e2e server enforces the same headers, so every test runs under the real policy, and a test confirms inline scripts and off-origin requests are blocked. If you add analytics or ads, extend the policy deliberately.
 
+## Android app
+
+The same code ships as a native Android app via [Capacitor](https://capacitorjs.com) (`android/`). It declares **no permissions, not even `INTERNET`**, so Android itself keeps your files on the device. Downloads open the system share sheet (Save to Files, Drive, WhatsApp, ...). Build a debug APK with `npm run android:debug`; GitHub Actions also builds it on every push. Full guide, including Play Store release steps: [docs/ANDROID.md](docs/ANDROID.md).
+
 ## Branding, preview image and deploy settings
 
 - `src/data/site.ts` holds the brand name, an optional contact email (shown on the Privacy page only when set) and the privacy-text date.
@@ -37,8 +41,8 @@ npm install
 npm run dev        # copies pdf.js font data, then starts Vite
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/
-npm test           # 67 unit tests (calculators, page ranges, file validation, signature placement)
-npm run test:e2e   # 38 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
+npm test           # 73 unit tests (calculators, page ranges, file validation, signature placement)
+npm run test:e2e   # 41 real-browser tests (build first): every tool with real files, app shell, privacy, axe a11y
 npm run ci         # unit tests, build, then e2e
 ```
 

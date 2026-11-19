@@ -1053,6 +1053,91 @@ test('accessibility: Video Compressor with a video loaded', async () => {
   await page.close();
 });
 
+
+/* ---------- Android (Capacitor) native save path, driven through a fake native bridge ---------- */
+async function nativeContext(mode = 'ok') {
+  const ctx = await browser.newContext({ acceptDownloads: true, viewport: { width: 1280, height: 900 } });
+  await ctx.addInitScript((mode) => {
+    window.androidBridge = {};                       // makes Capacitor report platform "android"
+    window.__native = []; window.__mode = mode;
+    const promise = (name) => ({ name, rtype: 'promise' });
+    window.Capacitor = {
+      isNativePlatform: () => true,                  // the real Android bridge injects this before any page script runs
+      getPlatform: () => 'android',
+      PluginHeaders: [
+        { name: 'Filesystem', methods: ['rmdir', 'writeFile', 'appendFile', 'getUri'].map(promise) },
+        { name: 'Share', methods: [promise('share'), promise('canShare')] },
+      ],
+      nativePromise: async (plugin, method, options) => {
+        window.__native.push({ plugin, method, options: { ...options } });
+        if (plugin === 'Filesystem' && method === 'getUri') return { uri: 'file:///data/cache/' + options.path };
+        if (plugin === 'Filesystem' && method === 'writeFile' && window.__mode === 'write-fails') throw new Error('No space left on device');
+        if (plugin === 'Share' && method === 'share' && window.__mode === 'canceled') throw new Error('Share canceled');
+        return {};
+      },
+    };
+  }, mode);
+  return ctx;
+}
+
+test('android: downloads go through the native save sheet in chunks (never <a download>), with the right file', async () => {
+  const ctx = await nativeContext('ok');
+  const page = await ctx.newPage(); page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  let webDownload = false; page.on('download', () => { webDownload = true; });
+  await page.goto(`${base}/#/tool/image-compressor`);
+  await fileInput(page).waitFor({ state: 'attached' });
+  const noisy = await makeImage(page, { w: 1100, h: 1100, noise: true }); // random pixels: a PNG of several MB, so it needs 2+ chunks
+  await fileInput(page).setInputFiles([buf('noise.png', noisy)]);
+  await btn(page, 'Compress images').click();
+  await root(page).getByRole('button', { name: 'Download', exact: true }).first().click();
+  await page.waitForFunction(() => window.__native.some((c) => c.plugin === 'Share'), null, { timeout: 15000 });
+  const calls = await page.evaluate(() => window.__native.map((c) => ({ p: c.plugin, m: c.method, path: c.options.path, dir: c.options.directory, len: typeof c.options.data === 'string' ? c.options.data.length : undefined, data: c.options.data, files: c.options.files, rec: c.options.recursive })));
+  assert.equal(webDownload, false, 'a browser download must not be used inside the app');
+  assert.deepEqual(calls.slice(0, 2).map((c) => `${c.p}.${c.m}`), ['Filesystem.rmdir', 'Filesystem.writeFile'], 'clears old exports, then writes');
+  assert.equal(calls[0].path, 'exports'); assert.equal(calls[0].dir, 'CACHE');
+  const writes = calls.filter((c) => c.m === 'writeFile' || c.m === 'appendFile');
+  assert.equal(writes[0].m, 'writeFile'); assert.ok(writes.length >= 2 && writes.slice(1).every((c) => c.m === 'appendFile'), `expected writeFile then appendFile chunks, got ${writes.map((c) => c.m)}`);
+  assert.ok(writes.every((c) => c.path === 'exports/noise-compressed.png' && c.dir === 'CACHE'));
+  assert.ok(writes.slice(0, -1).every((c) => !c.data.includes('=')), 'only the last chunk may be padded');
+  const bytes = Buffer.from(writes.map((c) => c.data).join(''), 'base64');
+  assert.equal(bytes.subarray(1, 4).toString(), 'PNG'); assert.ok(bytes.length > 3 * 1024 * 1024, `file is ${bytes.length} bytes`);
+  const share = calls.find((c) => c.p === 'Share');
+  assert.deepEqual(share.files, ['file:///data/cache/exports/noise-compressed.png']);
+  assert.equal(await page.locator('.toast').count(), 0, 'no error toast on success');
+  await ctx.close();
+});
+
+test('android: dismissing the share sheet is silent; a storage failure shows a clear message', async () => {
+  let ctx = await nativeContext('canceled'); let page = await ctx.newPage(); page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  await page.goto(`${base}/#/tool/image-compressor`); await fileInput(page).waitFor({ state: 'attached' });
+  await fileInput(page).setInputFiles([buf('a.png', await makeImage(page, {}))]);
+  await btn(page, 'Compress images').click();
+  await root(page).getByRole('button', { name: 'Download', exact: true }).first().click();
+  await page.waitForFunction(() => window.__native.some((c) => c.plugin === 'Share'));
+  await page.waitForTimeout(400);
+  assert.equal(await page.locator('.toast').count(), 0, 'canceling the share sheet is not an error');
+  await ctx.close();
+
+  ctx = await nativeContext('write-fails'); page = await ctx.newPage(); page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  await page.goto(`${base}/#/tool/image-compressor`); await fileInput(page).waitFor({ state: 'attached' });
+  await fileInput(page).setInputFiles([buf('a.png', await makeImage(page, {}))]);
+  await btn(page, 'Compress images').click();
+  await root(page).getByRole('button', { name: 'Download', exact: true }).first().click();
+  await page.locator('.toast').waitFor({ timeout: 10000 });
+  assert.match(await page.locator('.toast').innerText(), /Could not save the file: No space left on device/);
+  assert.equal(await page.evaluate(() => window.__native.some((c) => c.plugin === 'Share')), false, 'must not offer to share a file that was not written');
+  await ctx.close();
+});
+
+test('android: the web build still downloads normally (native path is not used in a browser)', async () => {
+  const page = await openTool('image-compressor');
+  await fileInput(page).setInputFiles([buf('a.png', await makeImage(page, {}))]);
+  await btn(page, 'Compress images').click();
+  const r = await download(page, () => root(page).getByRole('button', { name: 'Download', exact: true }).first().click());
+  assert.equal(r.name, 'a-compressed.png'); assert.equal(r.buf.subarray(1, 4).toString(), 'PNG');
+  await page.close();
+});
+
 /* ---------- runner ---------- */
 let failed = 0;
 const only = process.argv[2];
