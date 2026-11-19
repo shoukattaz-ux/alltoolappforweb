@@ -2,7 +2,7 @@
 // The screenshots are taken from the real, built app (run `npm run build` first). Run: npm run store:assets
 import { chromium } from 'playwright-core';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startServer } from '../tests/e2e/server.mjs';
@@ -10,6 +10,7 @@ import { startServer } from '../tests/e2e/server.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const out = resolve(root, 'store');
 const shots = resolve(out, 'screenshots');
+rmSync(shots, { recursive: true, force: true }); // regenerate the whole set, so renamed or removed screenshots never linger
 mkdirSync(shots, { recursive: true });
 if (!existsSync(resolve(root, 'dist/index.html'))) { console.error('Run `npm run build` first.'); process.exit(1); }
 const exe = ['/opt/pw-browsers/chromium', process.env.CHROMIUM_PATH].find((p) => p && existsSync(p));
@@ -52,6 +53,22 @@ const mkPdf = async () => {
   return Buffer.from(await d.save());
 };
 
+
+// A realistic photo for the scanner screenshot: a tilted, unevenly lit text page on a dark desk (generated, nothing real).
+const makeScanPhoto = (pg) => pg.evaluate(async () => {
+  const W = 1600, H = 1200, Q = [[430, 110], [1130, 160], [1090, 1130], [380, 1070]];
+  const solve = (A, b) => { const n = b.length; const m = A.map((r, i) => [...r, b[i]]); for (let c = 0; c < n; c++) { let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(m[r][c]) > Math.abs(m[p][c])) p = r; [m[c], m[p]] = [m[p], m[c]]; for (let r = c + 1; r < n; r++) { const f = m[r][c] / m[c][c]; for (let k = c; k <= n; k++) m[r][k] -= f * m[c][k]; } } const x = Array(n).fill(0); for (let r = n - 1; r >= 0; r--) { let s = m[r][n]; for (let k = r + 1; k < n; k++) s -= m[r][k] * x[k]; x[r] = s / m[r][r]; } return x; };
+  const hom = (from, to) => { const A = [], b = []; for (let i = 0; i < 4; i++) { const [u, v] = from[i], [x, y] = to[i]; A.push([u, v, 1, 0, 0, 0, -x * u, -x * v]); b.push(x); A.push([0, 0, 0, u, v, 1, -y * u, -y * v]); b.push(y); } return [...solve(A, b), 1]; };
+  const Hinv = hom(Q, [[0, 0], [1, 0], [1, 1], [0, 1]]); const pw = 850, ph = 1100; const pc = document.createElement('canvas'); pc.width = pw; pc.height = ph; const p = pc.getContext('2d');
+  p.fillStyle = '#f4f1e8'; p.fillRect(0, 0, pw, ph); p.fillStyle = '#1a2a6c'; p.font = 'bold 54px Georgia'; p.fillText('Quarterly Invoice', 70, 120); p.fillStyle = '#222'; p.font = '26px Georgia';
+  for (let i = 0; i < 26; i++) p.fillText(`${String(i + 1).padStart(2, '0')}  Consulting services rendered, item ${i + 1}`, 70, 200 + i * 34);
+  const pd = p.getImageData(0, 0, pw, ph).data; const out = document.createElement('canvas'); out.width = W; out.height = H; const ctx = out.getContext('2d'); const img = ctx.createImageData(W, H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const d = Hinv[6] * x + Hinv[7] * y + 1; const u = (Hinv[0] * x + Hinv[1] * y + Hinv[2]) / d, v = (Hinv[3] * x + Hinv[4] * y + Hinv[5]) / d; const i = (y * W + x) * 4; const light = 0.55 + 0.45 * (x / W) * (1 - 0.25 * (y / H)); let r, g, bl;
+    if (u >= 0 && u <= 1 && v >= 0 && v <= 1) { const j = (Math.min(ph - 1, Math.floor(v * ph)) * pw + Math.min(pw - 1, Math.floor(u * pw))) * 4; r = pd[j] * light; g = pd[j + 1] * light; bl = pd[j + 2] * light; } else { const wood = 38 + 14 * Math.sin(y / 9 + Math.sin(x / 130) * 3); r = wood * 1.1 * light; g = wood * 0.8 * light; bl = wood * 0.55 * light; }
+    img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = bl; img.data[i + 3] = 255; }
+  ctx.putImageData(img, 0, 0); const blob = await new Promise((r) => out.toBlob(r, 'image/jpeg', 0.9)); const u8 = new Uint8Array(await blob.arrayBuffer()); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s);
+});
+
 // 1. Dashboard
 await page.goto(base); await page.locator('.hero h1').waitFor(); await snap('phone-1-dashboard.png');
 
@@ -67,7 +84,13 @@ await page.getByRole('button', { name: 'Try a sample document' }).click(); await
 await page.locator('.rd-search').fill('agreement'); await page.waitForFunction(() => /\d+ of \d+/.test(document.querySelector('.rd-count')?.textContent ?? ''), null, { timeout: 15000 });
 await page.evaluate(() => { document.querySelector('.rd').scrollIntoView({ block: 'start' }); window.scrollBy(0, -70); }); await snap('phone-3-pdf-reader.png');
 
-// 4. Video compressor with a clip loaded
+// 4. Scan to PDF: a tilted photo, straightened and cleaned
+await page.goto(`${base}#/tool/scan-to-pdf`); await page.locator('input[type=file]').first().waitFor({ state: 'attached' });
+await page.locator('#tool-root input[type=file]').first().setInputFiles({ name: 'desk.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await makeScanPhoto(page), 'base64') });
+await page.locator('.sc-preview').waitFor({ state: 'visible', timeout: 30000 }); await page.waitForFunction(() => document.querySelector('.sc-preview')?.width > 0);
+await page.waitForTimeout(900); await page.evaluate(() => { const t = document.querySelector('.sc-preview-box').getBoundingClientRect().top + window.scrollY - 150; window.scrollTo(0, Math.max(0, t)); }); await snap('phone-4-scan-to-pdf.png');
+
+// 5. Video compressor with a clip loaded
 await page.goto(`${base}#/tool/video-compressor`); await page.locator('input[type=file]').waitFor({ state: 'attached' });
 const clip = await page.evaluate(async () => {
   const c = document.createElement('canvas'); c.width = 1280; c.height = 720; const x = c.getContext('2d'); const s = c.captureStream(30);
@@ -76,9 +99,9 @@ const clip = await page.evaluate(async () => {
   r.stop(); await done; const u = new Uint8Array(await new Blob(ch).arrayBuffer()); let q = ''; for (let i = 0; i < u.length; i += 0x8000) q += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(q);
 });
 await page.locator('input[type=file]').setInputFiles({ name: 'holiday.webm', mimeType: 'video/webm', buffer: Buffer.from(clip, 'base64') });
-await page.locator('.video-info').waitFor({ timeout: 30000 }); await page.evaluate(() => { document.querySelector('.video-info').scrollIntoView({ block: 'start' }); window.scrollBy(0, -84); }); await snap('phone-4-video-compressor.png');
+await page.locator('.video-info').waitFor({ timeout: 30000 }); await page.evaluate(() => { document.querySelector('.video-info').scrollIntoView({ block: 'start' }); window.scrollBy(0, -84); }); await snap('phone-5-video-compressor.png');
 
-// 5. Image compressor result
+// 6. Image compressor result
 await page.goto(`${base}#/tool/image-compressor`); await page.locator('input[type=file]').waitFor({ state: 'attached' });
 const photo = await page.evaluate(async () => {
   const c = document.createElement('canvas'); c.width = 2000; c.height = 1400; const x = c.getContext('2d');
@@ -90,10 +113,10 @@ const photo = await page.evaluate(async () => {
 await page.locator('input[type=file]').setInputFiles({ name: 'sunset.png', mimeType: 'image/png', buffer: Buffer.from(photo, 'base64') });
 await page.locator('#tool-root select').first().selectOption('jpeg');
 await page.getByRole('button', { name: 'Compress images' }).click(); await page.locator('#tool-root table').waitFor({ timeout: 20000 });
-await page.evaluate(() => { document.querySelector('#tool-root .notice').scrollIntoView({ block: 'center' }); }); await snap('phone-5-image-compressor.png');
+await page.evaluate(() => { document.querySelector('#tool-root .notice').scrollIntoView({ block: 'center' }); }); await snap('phone-6-image-compressor.png');
 
-// 6. All tools
-await page.goto(`${base}#/tools`); await page.locator('#dir-grid .tcard').first().waitFor(); await snap('phone-6-all-tools.png');
+// 7. All tools
+await page.goto(`${base}#/tools`); await page.locator('#dir-grid .tcard').first().waitFor(); await snap('phone-7-all-tools.png');
 
 await ctx.close(); await browser.close(); server.close();
 console.log('Play Store graphics written to store/');

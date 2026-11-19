@@ -42,6 +42,8 @@ describe('Android manifest and privacy policy', () => {
   it('the manifest declares no permissions at all (so no INTERNET), and turns backups off', () => {
     const m = read('android/app/src/main/AndroidManifest.xml');
     expect(m).not.toMatch(/<uses-permission/); expect(m).toMatch(/android:allowBackup="false"/);
+    // Scan to PDF's "Take a photo" needs to see the camera app on Android 11+, or it silently falls back to the gallery.
+    expect(m).toMatch(/<queries>[\s\S]*android\.media\.action\.IMAGE_CAPTURE[\s\S]*<\/queries>/);
   });
   it('the privacy policy states the key facts and shows the contact email, escaped', () => {
     const html = privacyHtml(SITE);

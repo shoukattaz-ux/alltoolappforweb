@@ -146,6 +146,39 @@ kbd { font: 600 .72rem var(--font); padding: 2px 7px; border-radius: 6px; backgr
 
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 120; max-width: min(92vw, 520px); padding: 12px 18px; border-radius: 14px; background: var(--navy-900); color: #fff; font-weight: 600; box-shadow: var(--shadow-lg); animation: rise .25s var(--ease); }
 
+/* Scan to PDF */
+.sc-start { display: grid; gap: 14px; } .sc-start-cam { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; } .sc-camera svg { flex: none; }
+.sc-start-compact:empty, .sc-start-compact { display: contents; }
+.sc-work { display: grid; gap: 18px; margin-top: 4px; }
+.sc-strip { list-style: none; display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 10px; margin: 0; scrollbar-width: thin; } .sc-strip li { margin: 0; flex: none; }
+.sc-thumb { position: relative; display: block; padding: 4px; border: 2px solid var(--line-2); border-radius: 12px; background: var(--surface); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.sc-thumb:hover { border-color: var(--brand-300); } .sc-thumb[aria-pressed="true"] { border-color: var(--brand-600); box-shadow: var(--ring); }
+.sc-thumb img { display: block; width: 76px; height: 100px; object-fit: contain; background: #fff; border-radius: 6px; }
+.sc-thumb-n { position: absolute; left: 9px; top: 9px; min-width: 22px; height: 22px; padding: 0 6px; display: grid; place-items: center; border-radius: 99px; background: var(--navy-900); color: #fff; font-size: .75rem; font-weight: 700; }
+.sc-editor { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+.sc-preview-box { background: #5b6272; border-radius: 16px; padding: 14px; display: grid; place-items: center; min-height: 280px; }
+.sc-preview { max-width: 100%; max-height: min(70vh, 720px); width: auto; height: auto; background: #fff; box-shadow: 0 2px 12px rgba(0, 0, 0, .4); }
+.sc-note { margin: 10px 2px 0; font-size: .9rem; color: var(--ink-2); } .sc-note-warn { color: var(--warn); font-weight: 650; }
+.sc-controls { display: grid; gap: 16px; } .sc-group { border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; background: var(--surface-2); } .sc-group h2 { margin: 0 0 10px; font-size: 1rem; letter-spacing: -.01em; }
+.sc-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; } .sc-btns .btn, .sc-add .btn { gap: 7px; } .sc-btns .btn svg, .sc-add .btn svg { flex: none; }
+.sc-seg { display: flex; flex-wrap: wrap; } .sc-seg button { padding: 8px 12px; flex: 1 1 auto; }
+.sc-group .field { margin-bottom: 10px; }
+.sc-add { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; } .sc-add p { margin: 0; } .sc-add-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.sc-export { border-top: 1px solid var(--line); padding-top: 14px; } .sc-export h2 { margin: 0 0 12px; font-size: 1.1rem; }
+.sc-result { margin-top: 14px; }
+/* corner editor */
+.sc-crop-dialog { max-width: min(920px, 96vw); }
+.sc-crop-center { display: grid; place-items: center; margin: 8px 0; background: #5b6272; border-radius: 14px; padding: 12px; }
+.sc-crop-wrap { position: relative; display: inline-block; max-width: 100%; line-height: 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+.sc-crop-canvas { display: block; max-width: 100%; max-height: 58vh; width: auto; height: auto; }
+.sc-crop-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.sc-crop-poly { fill: rgba(79, 70, 229, .2); stroke: #fff; stroke-width: 2.5px; vector-effect: non-scaling-stroke; stroke-linejoin: round; filter: drop-shadow(0 0 2px rgba(0, 0, 0, .6)); }
+.sc-handle { position: absolute; width: 48px; height: 48px; margin: -24px 0 0 -24px; padding: 0; border-radius: 50%; border: 0; background: transparent; cursor: grab; touch-action: none; }
+.sc-handle::before { content: ""; position: absolute; left: 12px; top: 12px; width: 24px; height: 24px; border-radius: 50%; background: rgba(79, 70, 229, .85); border: 3px solid #fff; box-shadow: 0 1px 6px rgba(0, 0, 0, .5); transition: transform .12s; }
+.sc-handle:hover::before, .sc-handle.active::before { transform: scale(1.25); } .sc-handle:focus-visible { outline: none; } .sc-handle:focus-visible::before { outline: 3px solid #fde047; outline-offset: 2px; }
+.sc-handle.active { cursor: grabbing; }
+@media (max-width: 900px) { .sc-editor { grid-template-columns: minmax(0, 1fr); } .sc-preview-box { padding: 8px; min-height: 220px; } .sc-thumb img { width: 60px; height: 80px; } .sc-crop-canvas { max-height: 50vh; } }
+
 /* PDF reader */
 /* pdf.js appends a hidden canvas to <body> to measure text; keep it out of the layout and the accessibility tree. */
 .hiddenCanvasElement { position: absolute; top: 0; left: 0; width: 0; height: 0; display: none; }

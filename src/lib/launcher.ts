@@ -18,6 +18,7 @@ const IMAGE: Suggestion[] = [
   { slug: 'image-cropper', label: 'Crop', hint: 'Trim to a ratio or size', single: true },
   { slug: 'image-converter', label: 'Change format', hint: 'JPG, PNG or WebP', single: false },
   { slug: 'image-to-pdf', label: 'Turn into a PDF', hint: 'One page per image', single: false },
+  { slug: 'scan-to-pdf', label: 'Scan as a document', hint: 'Straighten, clean up, make a PDF', single: false },
   { slug: 'image-to-base64', label: 'Encode as Base64', hint: 'For code and data URIs', single: true },
 ];
 const VIDEO: Suggestion[] = [

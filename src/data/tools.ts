@@ -74,6 +74,33 @@ export const TOOLS: Tool[] = [
     search: 'pdf reader viewer open read view search find document pages zoom',
   },
   {
+    slug: 'scan-to-pdf', name: 'Scan to PDF', category: 'pdf', icon: 'scan',
+    short: 'Turn photos of paper into clean, straight PDF pages. Edges found for you.',
+    seoTitle: 'Scan to PDF Online: Camera Document Scanner (Free, Private)',
+    metaDescription: 'Scan documents with your phone camera into a PDF. Automatic edge detection, perspective straightening, shadow removal, black and white mode, reorder pages. Free, and your photos are never uploaded.',
+    h1: 'Scan Documents to PDF',
+    intro: 'Photograph a page, a receipt or a form and get a flat, clean PDF. The scanner finds the edges of the paper, straightens the perspective, removes shadows and turns the page white, all on your device, so private documents are never uploaded.',
+    local: true,
+    steps: ['On a phone, choose "Take a photo" to open the camera, or add photos from your gallery or computer. Put the page on a darker surface with good light.', 'The page edges are found and straightened for you. If they are off, choose "Adjust corners" and drag the four handles onto the corners of the page.', 'Pick a clean-up style (Clean page, Black & white, Grayscale), fine-tune brightness and contrast, and rotate, reorder or delete pages.', 'Choose the page size and quality, then "Create PDF". Download it, open it in the PDF Reader, or save the pages as images.'],
+    features: ['Automatic page detection and perspective correction, so a tilted photo becomes a straight page.', 'Draggable corner handles (or arrow keys) for when the automatic edges are not right.', 'Clean-up styles: Clean page removes shadows and whitens the paper, Black & white gives crisp text, plus Grayscale and Auto.', 'Brightness and contrast sliders, and one tap to use the same style for every page.', 'Rotate, reorder and delete pages; up to 40 pages per document.', 'A4, US Letter or fit-to-scan page size, optional margins, and three quality levels to balance sharpness and file size.', 'Download the PDF, open it straight in the PDF Reader, or download the cleaned pages as JPG images.', 'Works offline. Your photos never leave your device and the app needs no camera permission.'],
+    examples: [
+      { title: 'Scan a receipt for expenses', body: 'Photograph the receipt on a desk, choose Black & white, and save a small, readable PDF to attach to your claim.' },
+      { title: 'Turn a signed form into one PDF', body: 'Take a photo of each page, reorder them if needed, create one PDF, then open it in the PDF Signer or send it by email.' },
+      { title: 'Rescue a badly lit page', body: 'Choose Clean page to flatten uneven light and shadows, then raise the contrast a little.' },
+    ],
+    limits: ['Automatic detection works best when the page is lighter than the surface under it. If the page is dark or the same colour as the table, drag the corners yourself.', 'This does not recognise text (no OCR), so the PDF holds page images and its text cannot be searched or copied.', 'Curved pages (an open book) are straightened as flat rectangles, so the curve is not removed.', 'Camera photos can be large. Pages are processed at up to about 2600 pixels on the longest side, which is sharp enough for A4 text.', 'HEIC photos from some iPhones are not supported; choose JPG, PNG or WebP, or change the camera format to "Most Compatible".'],
+    faqs: [
+      { q: 'Are my photos uploaded anywhere?', a: 'No. Finding the page, straightening it, cleaning it up and building the PDF all happen on your device.' },
+      { q: 'Why does it ask for no camera permission?', a: 'On a phone, "Take a photo" opens your camera app, which takes the picture and hands it back. This app never accesses the camera itself.' },
+      { q: 'The edges were found wrongly. What now?', a: 'Choose "Adjust corners" and drag the four handles onto the page corners. "Use whole photo" skips straightening if the page already fills the picture.' },
+      { q: 'Which clean-up style should I use?', a: '"Clean page" suits most documents and keeps colours. "Black & white" gives the smallest files and crispest text for printed pages and receipts. "Original" keeps the photo as it is.' },
+      { q: 'Can I search the text in the PDF?', a: 'Not yet: the pages are images. Text recognition (OCR) is not included.' },
+      { q: 'How big will the PDF be?', a: 'About 150 to 500 KB per page at the default quality. Choose "Smaller file" for email, or "Best quality" for archiving.' },
+    ],
+    related: ['image-to-pdf', 'pdf-reader', 'merge-pdf', 'compress-pdf'],
+    search: 'scan scanner camera document photo receipt paper straighten crop perspective black white clean shadows pdf phone',
+  },
+  {
     slug: 'merge-pdf', name: 'PDF Merger', category: 'pdf', icon: 'merge',
     short: 'Combine several PDFs into one document, in the order you choose.',
     seoTitle: 'Merge PDF Files Online (Free, Private)',
@@ -478,7 +505,7 @@ export const toolsByCategory = (c: Category) => TOOLS.filter((t) => t.category =
  * Measured from the real interface; re-measure if you change a tool's initial layout.
  */
 export const TOOL_UI_HEIGHT: Record<string, number> = {
-  'pdf-reader': 361, 'merge-pdf': 361, 'sign-pdf': 325, 'split-pdf': 277, 'compress-pdf': 277, 'pdf-to-image': 295, 'image-to-pdf': 361,
+  'scan-to-pdf': 400, 'pdf-reader': 361, 'merge-pdf': 361, 'sign-pdf': 325, 'split-pdf': 277, 'compress-pdf': 277, 'pdf-to-image': 295, 'image-to-pdf': 361,
   'image-compressor': 361, 'image-resizer': 277, 'image-cropper': 277, 'image-converter': 361, 'image-to-base64': 277,
   'video-compressor': 361, 'bmi-calculator': 334, 'percentage-calculator': 1047, 'age-calculator': 150, 'discount-calculator': 585,
 };

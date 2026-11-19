@@ -38,6 +38,16 @@
     </application>
 
     <!--
+      Lets the app see that a camera app exists (Android 11+ hides other apps otherwise). Without this, "Take a photo" in
+      Scan to PDF would quietly open the gallery instead of the camera. This is not a permission and grants no access.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
+
+    <!--
       Deliberately NO permissions. In particular there is no INTERNET permission: every tool runs on the device,
       and without that permission Android itself prevents this app from sending anything over the network.
       Do not add one without updating the privacy page.

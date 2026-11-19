@@ -76,7 +76,7 @@ const isPdf = (b) => b.subarray(0, 5).toString() === '%PDF-';
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 /* ---------- App shell tests ---------- */
-const ALL_TOOLS = ['pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
+const ALL_TOOLS = ['scan-to-pdf', 'pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
 const axeSrc = readFileSync(resolve(here, '../../node_modules/axe-core/axe.min.js'), 'utf8');
 
 test('app: every route mounts with one h1, no console errors, and all form controls are labelled', async () => {
@@ -97,12 +97,12 @@ test('app: every route mounts with one h1, no console errors, and all form contr
   await page.close();
 });
 
-test('app: dashboard lists all 17 tools; sidebar links every tool and marks the current one', async () => {
+test('app: dashboard lists all 18 tools; sidebar links every tool and marks the current one', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/`);
   await page.locator('.hero h1').waitFor();
-  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 17); // category sections only (favorites/recents may add more)
-  assert.equal(await page.locator('#nav .tool-link').count(), 17);
+  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 18); // category sections only (favorites/recents may add more)
+  assert.equal(await page.locator('#nav .tool-link').count(), 18);
   await page.goto(`${base}/#/tool/image-resizer`);
   await page.locator('#view h1').waitFor();
   assert.equal(await page.locator('#nav [aria-current="page"]').innerText().then((s) => s.trim()), 'Image Resizer');
@@ -115,7 +115,7 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
   await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
   await page.keyboard.press('Control+k');
   await page.locator('.palette-box').waitFor();
-  assert.equal(await page.locator('#pal-list li').count(), 17);
+  assert.equal(await page.locator('#pal-list li').count(), 18);
   await page.keyboard.type('pdf');
   const n = await page.locator('#pal-list li[data-i]').count();
   assert.ok(n >= 6, `pdf matches ${n}`);
@@ -136,8 +136,8 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
 test('app: directory tabs and live filter work, and the filter is kept in the URL', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/tools`); await page.locator('#dir-q').waitFor();
-  assert.equal(await page.locator('#dir-grid .tcard').count(), 17);
-  await page.goto(`${base}/#/pdf`); assert.equal(await page.locator('#dir-grid .tcard').count(), 7);
+  assert.equal(await page.locator('#dir-grid .tcard').count(), 18);
+  await page.goto(`${base}/#/pdf`); assert.equal(await page.locator('#dir-grid .tcard').count(), 8);
   await page.goto(`${base}/#/image`); assert.equal(await page.locator('#dir-grid .tcard').count(), 5);
   await page.goto(`${base}/#/video`); assert.equal(await page.locator('#dir-grid .tcard').count(), 1);
   await page.goto(`${base}/#/calculator`); assert.equal(await page.locator('#dir-grid .tcard').count(), 4);
@@ -1395,6 +1395,176 @@ test('accessibility: dashboard launcher with suggestions, and the PDF Reader wit
   await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor(); await page.waitForTimeout(450); await scan('dashboard (dark theme)');
   await page.close();
   assert.deepEqual(bad, []);
+});
+
+
+/* ---------- Scan to PDF ---------- */
+/** A photo of a tilted, unevenly lit text page on a dark desk (perspective-skewed), as a JPEG buffer. */
+async function makeScanPhoto(page, { land = false, quad = null, w = 1600, h = 1200 } = {}) {
+  const b64 = await page.evaluate(async ({ land, quad, w, h }) => {
+    const Q = quad ?? (land ? [[300, 230], [1300, 200], [1280, 975], [320, 1000]] : [[430, 110], [1130, 160], [1090, 1130], [380, 1070]]);
+    const solve = (A, b) => { const n = b.length; const m = A.map((r, i) => [...r, b[i]]); for (let c = 0; c < n; c++) { let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(m[r][c]) > Math.abs(m[p][c])) p = r; [m[c], m[p]] = [m[p], m[c]]; for (let r = c + 1; r < n; r++) { const f = m[r][c] / m[c][c]; for (let k = c; k <= n; k++) m[r][k] -= f * m[c][k]; } } const x = Array(n).fill(0); for (let r = n - 1; r >= 0; r--) { let s = m[r][n]; for (let k = r + 1; k < n; k++) s -= m[r][k] * x[k]; x[r] = s / m[r][r]; } return x; };
+    const hom = (from, to) => { const A = [], b = []; for (let i = 0; i < 4; i++) { const [u, v] = from[i], [x, y] = to[i]; A.push([u, v, 1, 0, 0, 0, -x * u, -x * v]); b.push(x); A.push([0, 0, 0, u, v, 1, -y * u, -y * v]); b.push(y); } return [...solve(A, b), 1]; };
+    const Hinv = hom(Q, [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    const pw = land ? 1100 : 850, ph = land ? 850 : 1100; const pc = document.createElement('canvas'); pc.width = pw; pc.height = ph; const p = pc.getContext('2d');
+    p.fillStyle = '#f4f1e8'; p.fillRect(0, 0, pw, ph); p.fillStyle = '#1a2a6c'; p.font = 'bold 54px Georgia'; p.fillText('Quarterly Invoice', 70, 120); p.fillStyle = '#222'; p.font = '26px Georgia';
+    for (let i = 0; i < (land ? 18 : 26); i++) p.fillText(`${String(i + 1).padStart(2, '0')}  Consulting services rendered, item ${i + 1}`, 70, 200 + i * 34);
+    const pd = p.getImageData(0, 0, pw, ph).data; const out = document.createElement('canvas'); out.width = w; out.height = h; const ctx = out.getContext('2d'); const img = ctx.createImageData(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const d = Hinv[6] * x + Hinv[7] * y + 1; const u = (Hinv[0] * x + Hinv[1] * y + Hinv[2]) / d, v = (Hinv[3] * x + Hinv[4] * y + Hinv[5]) / d; const i = (y * w + x) * 4; const light = 0.55 + 0.45 * (x / w) * (1 - 0.25 * (y / h)); let r, g, bl;
+      if (u >= 0 && u <= 1 && v >= 0 && v <= 1) { const j = (Math.min(ph - 1, Math.floor(v * ph)) * pw + Math.min(pw - 1, Math.floor(u * pw))) * 4; r = pd[j] * light; g = pd[j + 1] * light; bl = pd[j + 2] * light; }
+      else { const wood = 38 + 14 * Math.sin(y / 9 + Math.sin(x / 130) * 3); r = wood * 1.1 * light; g = wood * 0.8 * light; bl = wood * 0.55 * light; }
+      img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = bl; img.data[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0); const blob = await new Promise((r) => out.toBlob(r, 'image/jpeg', 0.9)); const u8 = new Uint8Array(await blob.arrayBuffer()); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s);
+  }, { land, quad, w, h });
+  return Buffer.from(b64, 'base64');
+}
+const scanReady = (page, n = 1) => page.waitForFunction((n) => document.querySelectorAll('.sc-strip .sc-thumb').length === n && document.querySelector('.sc-preview')?.width > 0, n, { timeout: 30000 });
+/** Brightness statistics of a canvas: mean of its outer border strip, the share of dark pixels, and the set of distinct red values (cap 5). */
+const canvasStats = (page, sel) => page.evaluate((sel) => {
+  const c = document.querySelector(sel); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const w = c.width, h = c.height; let bsum = 0, bn = 0, dark = 0, n = 0; const reds = new Set(); let colour = 0;
+  const bx = Math.max(2, Math.round(w * 0.015)), by = Math.max(2, Math.round(h * 0.015));
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; const v = d[i]; if (x < bx || x >= w - bx || y < by || y >= h - by) { bsum += v; bn++; } if (v < 90) dark++; n++; if (reds.size < 6) reds.add(v); if (Math.abs(d[i] - d[i + 2]) > 14) colour++; }
+  return { w, h, border: bsum / bn, dark: dark / n, reds: [...reds], colour: colour / n };
+}, sel);
+
+test('Scan to PDF: finds the page in a tilted, shadowed photo, straightens and cleans it, and the PDF page is white with dark text', async () => {
+  const page = await openTool('scan-to-pdf');
+  await fileInput(page).first().setInputFiles([buf('desk.jpg', await makeScanPhoto(page))]);
+  await scanReady(page);
+  assert.match(await page.locator('.sc-note').innerText(), /Page edges found/);
+  const ratio = await page.locator('.sc-preview').evaluate((c) => c.width / c.height);
+  assert.ok(Math.abs(ratio - 850 / 1100) < 0.08, `the page was straightened to its real shape (width/height ${ratio.toFixed(3)} vs 0.773)`);
+  const s = await canvasStats(page, '.sc-preview');
+  assert.ok(s.border > 225, `no dark desk fringe along the page edges (border brightness ${s.border.toFixed(0)})`); assert.ok(s.dark > 0.01 && s.dark < 0.25, 'text is dark but the page is mostly white');
+  const pdf = await download(page, async () => { await btn(page, 'Create PDF').click(); await root(page).getByRole('button', { name: 'Download PDF' }).click(); });
+  assert.equal(pdf.name, 'scan.pdf'); assert.ok(isPdf(pdf.buf)); assert.ok(pdf.buf.length < 1_500_000);
+  const doc = await PDFDocument.load(pdf.buf); assert.equal(doc.getPageCount(), 1);
+  const { width, height } = doc.getPage(0).getSize(); assert.ok(Math.abs(width - 595.28) < 1 && Math.abs(height - 841.89) < 1, `A4 portrait, got ${width}x${height}`);
+  assert.equal(doc.getTitle(), 'scan');
+  // open the finished PDF in the reader and look at the actual pixels
+  await root(page).getByRole('button', { name: 'Open in PDF Reader' }).click();
+  await page.waitForFunction(() => location.hash === '#/tool/pdf-reader');
+  await page.locator('.rd-page canvas').first().waitFor({ timeout: 20000 }); await page.waitForTimeout(500);
+  const r = await canvasStats(page, '.rd-page[data-page="1"] canvas'); assert.ok(r.border > 235, `PDF page edge is white (${r.border.toFixed(0)})`); assert.ok(r.dark > 0.005, 'PDF page has dark text');
+  await page.close();
+});
+
+test('Scan to PDF: clean-up styles do what they say (black and white, grayscale, original, brightness)', async () => {
+  const page = await openTool('scan-to-pdf');
+  await fileInput(page).first().setInputFiles([buf('desk.jpg', await makeScanPhoto(page))]); await scanReady(page);
+  const style = async (name) => { await page.getByRole('button', { name, exact: true }).click(); await page.waitForTimeout(250); return canvasStats(page, '.sc-preview'); };
+  const bw = await style('Black & white'); assert.deepEqual([...bw.reds].sort((a, b) => a - b), [0, 255]); assert.equal(await page.locator('[data-filter="bw"]').getAttribute('aria-pressed'), 'true');
+  const gray = await style('Grayscale'); assert.ok(gray.colour < 0.001, 'grayscale has no colour');
+  const orig = await style('Original'); assert.ok(orig.border < 200 || orig.dark > 0.3, 'the original keeps the unevenly lit photo');
+  const clean = await style('Clean page'); assert.ok(clean.border > 225);
+  const before = await canvasStats(page, '.sc-preview');
+  await page.locator('#sc-brightness').fill('-60'); await page.waitForTimeout(300);
+  const darker = await canvasStats(page, '.sc-preview'); assert.ok(darker.border < before.border - 20, `lower brightness darkens the page (${before.border.toFixed(0)} -> ${darker.border.toFixed(0)})`);
+  await page.locator('#sc-brightness').fill('0'); await page.locator('#sc-contrast').fill('80'); await page.waitForTimeout(300);
+  const sharper = await canvasStats(page, '.sc-preview'); assert.ok(sharper.dark >= before.dark, 'more contrast keeps the text at least as dark');
+  assert.equal(await page.locator('#sc-contrast').inputValue(), '80');
+  await page.close();
+});
+
+test('Scan to PDF: corner editor works by keyboard and by mouse, and "whole photo" / cancel behave', async () => {
+  const page = await openTool('scan-to-pdf');
+  await fileInput(page).first().setInputFiles([buf('desk.jpg', await makeScanPhoto(page))]); await scanReady(page);
+  const w0 = await page.locator('.sc-preview').evaluate((c) => c.width);
+  await btn(page, 'Adjust corners').click(); await page.locator('.sc-crop-dialog').waitFor();
+  const handle = page.getByRole('button', { name: 'Top-left corner' });
+  assert.equal(await page.locator('.sc-handle').count(), 4);
+  const left0 = parseFloat(await handle.evaluate((e) => e.style.left));
+  await handle.focus(); for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight'); await page.keyboard.press('Shift+ArrowDown');
+  assert.ok(parseFloat(await handle.evaluate((e) => e.style.left)) > left0 + 3, 'arrow keys move the handle');
+  const tr = page.getByRole('button', { name: 'Top-right corner' }); const box = await tr.boundingBox(); const l1 = parseFloat(await tr.evaluate((e) => e.style.left));
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.move(box.x + box.width / 2 - 60, box.y + box.height / 2 + 40, { steps: 6 }); await page.mouse.up();
+  assert.ok(parseFloat(await tr.evaluate((e) => e.style.left)) < l1 - 3, 'dragging with the mouse moves the handle');
+  await page.getByRole('button', { name: 'Apply' }).click(); await page.locator('.sc-crop-dialog').waitFor({ state: 'detached' });
+  assert.notEqual(await page.locator('.sc-preview').evaluate((c) => c.width), w0, 'the page was re-cut from the new corners');
+  await btn(page, 'Adjust corners').click(); await page.getByRole('button', { name: 'Use whole photo' }).click(); await page.getByRole('button', { name: 'Apply' }).click();
+  await page.waitForFunction(() => /whole photo/i.test(document.querySelector('.sc-note').textContent));
+  await btn(page, 'Adjust corners').click(); await page.getByRole('button', { name: 'Find edges again' }).click(); await page.keyboard.press('Escape'); // Escape cancels
+  await page.locator('.sc-crop-dialog').waitFor({ state: 'detached' });
+  assert.match(await page.locator('.sc-note').innerText(), /whole photo/i, 'cancel changes nothing');
+  await btn(page, 'Find edges').click(); await page.waitForFunction(() => /Page edges found/.test(document.querySelector('.sc-note').textContent));
+  await page.close();
+});
+
+test('Scan to PDF: several pages can be reordered, rotated and deleted, and the PDF follows', async () => {
+  const page = await openTool('scan-to-pdf');
+  const pdfPages = async () => { const out = await download(page, async () => { await btn(page, 'Create PDF').click(); await root(page).getByRole('button', { name: 'Download PDF' }).click(); }); const d = await PDFDocument.load(out.buf); return d.getPages().map((p) => (p.getWidth() > p.getHeight() ? 'L' : 'P')).join(''); };
+  await fileInput(page).first().setInputFiles([buf('p.jpg', await makeScanPhoto(page)), buf('l.jpg', await makeScanPhoto(page, { land: true }))]);
+  await scanReady(page, 2);
+  assert.equal(await page.locator('.sc-thumb[aria-pressed="true"]').getAttribute('aria-label'), 'Page 2 of 2');   // the newest page is selected
+  assert.equal(await pdfPages(), 'PL');
+  await btn(page, 'Move earlier').click(); assert.equal(await pdfPages(), 'LP');
+  await page.locator('.sc-thumb').nth(1).click(); await btn(page, 'Rotate right').click(); assert.equal(await pdfPages(), 'LL');   // portrait page turned on its side
+  await btn(page, 'Rotate left').click(); assert.equal(await pdfPages(), 'LP');  // turned back
+  await btn(page, 'Delete page').click(); await scanReady(page, 1); assert.equal(await pdfPages(), 'L');
+  await btn(page, 'Add more photos').waitFor(); await btn(page, 'Start over').click();
+  await page.locator('.dropzone').waitFor({ state: 'visible' }); assert.equal(await page.locator('.sc-thumb').count(), 0);
+  await page.close();
+});
+
+test('Scan to PDF: export options (page size, margins, quality, file name) and the page-images ZIP', async () => {
+  const page = await openTool('scan-to-pdf');
+  await fileInput(page).first().setInputFiles([buf('a.jpg', await makeScanPhoto(page)), buf('b.jpg', await makeScanPhoto(page, { land: true }))]); await scanReady(page, 2);
+  const make = async () => download(page, async () => { await btn(page, 'Create PDF').click(); await root(page).getByRole('button', { name: 'Download PDF' }).click(); });
+  const dims = async (r) => { const d = await PDFDocument.load(r.buf); return d.getPages().map((p) => [Math.round(p.getWidth()), Math.round(p.getHeight())]); };
+  await page.getByLabel('Page size').selectOption('letter'); assert.deepEqual((await dims(await make()))[0], [612, 792]);
+  await page.getByLabel('Page size').selectOption('fit'); const fit = (await dims(await make()))[0]; assert.ok(fit[0] < fit[1] && fit[0] > 150 && fit[0] < 700, `fit-to-scan page is portrait and sized from the pixels (${fit})`);
+  await page.getByLabel('Margin').selectOption('36'); const m = (await dims(await make()))[0]; assert.ok(m[0] > fit[0] + 60, 'margins add to the page size');
+  await page.getByLabel('Margin').selectOption('0'); await page.getByLabel('Page size').selectOption('a4');
+  await page.getByLabel('Quality').selectOption('best'); const best = await make();
+  await page.getByLabel('Quality').selectOption('small'); const small = await make(); assert.ok(small.buf.length < best.buf.length, `smaller-file quality (${small.buf.length}) < best (${best.buf.length})`);
+  await page.getByLabel('File name').fill('My Receipts / May'); const named = await make(); assert.equal(named.name, 'My Receipts _ May.pdf');
+  const zip = await download(page, () => root(page).getByRole('button', { name: 'Download pages as images' }).click());
+  const files = Object.keys((await JSZip.loadAsync(zip.buf)).files); assert.equal(files.length, 2); assert.ok(files.every((f) => /^My Receipts _ May-page-0\d\.jpg$/.test(f)), files.join());
+  await page.close();
+});
+
+test('Scan to PDF: rejects bad files, caps a document at 40 pages, and the dashboard offers "Scan as a document" for photos', async () => {
+  const page = await openTool('scan-to-pdf');
+  await fileInput(page).first().setInputFiles([buf('fake.jpg', Buffer.from('not an image at all'))]);
+  await root(page).getByText(/not a supported file/).waitFor();
+  const tiny = await makeImage(page, { w: 64, h: 64 });
+  await fileInput(page).first().setInputFiles(Array.from({ length: 41 }, (_, i) => buf(`t${i}.png`, tiny)));
+  await page.waitForFunction(() => document.querySelectorAll('.sc-strip .sc-thumb').length === 40, null, { timeout: 60000 });
+  await root(page).getByText(/Only 40 files are allowed|up to 40 pages/).first().waitFor({ timeout: 15000 });
+  await page.close();
+  const home = await newPage(); await home.goto(`${base}/#/`); await home.locator('#launcher-input').waitFor({ state: 'attached' });
+  await home.locator('#launcher-input').setInputFiles([buf('desk.jpg', await makeScanPhoto(home))]);
+  await home.locator('#launcher-result').getByRole('button', { name: /Scan as a document/ }).click();
+  await home.waitForFunction(() => location.hash === '#/tool/scan-to-pdf');
+  await home.waitForFunction(() => document.querySelectorAll('.sc-strip .sc-thumb').length === 1 && document.querySelector('.sc-preview')?.width > 0, null, { timeout: 30000 });
+  await home.close();
+});
+
+test('mobile: Scan to PDF offers a camera button that opens the camera app (no permission), and fits a phone screen', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage(); page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  await page.goto(`${base}/#/tool/scan-to-pdf`); await fileInput(page).first().waitFor({ state: 'attached' });
+  assert.ok(await page.getByRole('button', { name: 'Take a photo' }).isVisible(), 'camera button on touch devices');
+  assert.equal(await page.locator('input[type=file][capture="environment"]').count(), 1, 'uses the camera app via the file picker, so no camera permission is needed');
+  await page.locator('input[type=file][capture]').setInputFiles([buf('cam.jpg', await makeScanPhoto(page))]); await scanReady(page);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+  await btn(page, 'Adjust corners').click(); await page.locator('.sc-crop-dialog').waitFor();
+  const dlg = await page.locator('.sc-crop-dialog').boundingBox(); assert.ok(dlg.width <= 390 && dlg.x >= 0, `corner editor fits the screen (${Math.round(dlg.width)}px)`);
+  const h0 = await page.locator('.sc-handle').first().boundingBox(); assert.ok(h0.width >= 44 && h0.height >= 44, 'handles are big enough to touch');
+  await page.keyboard.press('Escape'); await ctx.close();
+  const desktop = await newPage(); await desktop.goto(`${base}/#/tool/scan-to-pdf`); await fileInput(desktop).first().waitFor({ state: 'attached' });
+  assert.equal(await desktop.getByRole('button', { name: 'Take a photo' }).count(), 0, 'no camera button on a mouse-and-keyboard computer'); await desktop.close();
+});
+
+test('accessibility: Scan to PDF with a page loaded and the corner editor open', async () => {
+  const page = await openTool('scan-to-pdf'); const bad = [];
+  const scan = async (label) => { await page.evaluate(axeSrc); const res = await page.evaluate(() => axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] } })); for (const v of res.violations) bad.push(`${label}: ${v.id} (${v.impact}) ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`); };
+  await fileInput(page).first().setInputFiles([buf('desk.jpg', await makeScanPhoto(page))]); await scanReady(page); await page.waitForTimeout(450); await scan('scanner');
+  await btn(page, 'Adjust corners').click(); await page.locator('.sc-crop-dialog').waitFor(); await page.waitForTimeout(450); await scan('corner editor'); await page.keyboard.press('Escape');
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; }); await page.waitForTimeout(300); await scan('scanner (dark theme)');
+  await page.close(); assert.deepEqual(bad, []);
 });
 
 /* ---------- runner ---------- */
