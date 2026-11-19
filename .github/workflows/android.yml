@@ -36,11 +36,15 @@ jobs:
         run: |
           SDKM="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)"
           echo "sdkmanager: $SDKM"
-          yes | sudo env "JAVA_HOME=$JAVA_HOME" "$SDKM" --licenses > /dev/null || true
+          # sudo uses root's own HOME so it cannot leave root-owned files in the runner's home (Gradle needs
+          # ~/.config/.android to be writable to create the debug keystore).
+          yes | sudo env HOME=/root "JAVA_HOME=$JAVA_HOME" "$SDKM" --licenses > /dev/null || true
           for pkg in "platforms;android-36" "build-tools;36.0.0"; do
             if [ -d "$ANDROID_HOME/$(echo "$pkg" | tr ';' '/')" ]; then echo "already installed: $pkg"
-            else sudo env "JAVA_HOME=$JAVA_HOME" "$SDKM" "$pkg"; fi
+            else sudo env HOME=/root "JAVA_HOME=$JAVA_HOME" "$SDKM" "$pkg"; fi
           done
+          mkdir -p "$HOME/.config/.android" "$HOME/.android"
+          sudo chown -R "$(id -u):$(id -g)" "$HOME/.config" "$HOME/.android"
 
       - uses: gradle/actions/setup-gradle@v4
 
