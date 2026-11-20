@@ -284,3 +284,19 @@ noscript .notice { margin: 12px 0; }
 .size-chip:hover { background: var(--brand-50); border-color: var(--brand-300); }
 .size-chip[aria-pressed="true"] { background: var(--brand-700); color: #fff; border-color: var(--brand-700); }
 :root[data-theme="dark"] .size-chip[aria-pressed="true"] { background: var(--brand-200); color: #fff; border-color: var(--brand-300); }
+
+/* Passport & ID Photo Maker */
+.idp-layout { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 8px; }
+.idp-stage { position: relative; width: 100%; max-width: 340px; touch-action: none; user-select: none; line-height: 0; border-radius: 12px; overflow: hidden; background: #0f172a; cursor: grab; box-shadow: var(--shadow-sm); }
+.idp-stage.is-dragging { cursor: grabbing; }
+.idp-stage canvas { width: 100%; height: 100%; display: block; }
+.idp-stage:focus-visible { outline: 3px solid var(--brand-600); outline-offset: 3px; }
+.idp-guide { position: absolute; inset: 0; pointer-events: none; }
+.idp-guide[hidden] { display: none; }
+.idp-head { position: absolute; left: 22%; width: 56%; top: 12%; height: 62%; border: 2px dashed rgba(255,255,255,.9); border-radius: 50%; box-shadow: 0 0 0 1px rgba(0,0,0,.45); }
+.idp-eyes { position: absolute; left: 14%; right: 14%; top: 40%; border-top: 1px dashed rgba(255,255,255,.85); box-shadow: 0 -1px 0 rgba(0,0,0,.4); }
+.idp-h3 { margin: 28px 0 6px; font-size: 1.05rem; }
+.idp-side { display: grid; gap: 14px; }
+.checkline { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; font-size: .92rem; cursor: pointer; line-height: 1.2; }
+.checkline input { width: 20px; height: 20px; }
+@media (max-width: 720px) { .idp-layout { grid-template-columns: minmax(0, 1fr); } .idp-stage { margin-inline: auto; } }

@@ -1,7 +1,7 @@
 // End-to-end tests: drives the built site in real Chromium, exercising every tool with real files.
 // Run after `npm run build`:  npm run test:e2e
 import { chromium } from 'playwright-core';
-import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
+import { PDFDocument, PDFArray, rgb, StandardFonts, degrees, decodePDFRawStream } from 'pdf-lib';
 import JSZip from 'jszip';
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, rmSync, existsSync, readdirSync } from 'node:fs';
@@ -76,7 +76,7 @@ const isPdf = (b) => b.subarray(0, 5).toString() === '%PDF-';
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 /* ---------- App shell tests ---------- */
-const ALL_TOOLS = ['extract-text', 'organize-pdf', 'scan-to-pdf', 'pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'compress-to-size', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
+const ALL_TOOLS = ['extract-text', 'organize-pdf', 'scan-to-pdf', 'pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'compress-to-size', 'passport-photo', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
 const axeSrc = readFileSync(resolve(here, '../../node_modules/axe-core/axe.min.js'), 'utf8');
 
 test('app: every route mounts with one h1, no console errors, and all form controls are labelled', async () => {
@@ -97,12 +97,12 @@ test('app: every route mounts with one h1, no console errors, and all form contr
   await page.close();
 });
 
-test('app: dashboard lists all 21 tools; sidebar links every tool and marks the current one', async () => {
+test('app: dashboard lists all 22 tools; sidebar links every tool and marks the current one', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/`);
   await page.locator('.hero h1').waitFor();
-  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 21); // category sections only (favorites/recents may add more)
-  assert.equal(await page.locator('#nav .tool-link').count(), 21);
+  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 22); // category sections only (favorites/recents may add more)
+  assert.equal(await page.locator('#nav .tool-link').count(), 22);
   await page.goto(`${base}/#/tool/image-resizer`);
   await page.locator('#view h1').waitFor();
   assert.equal(await page.locator('#nav [aria-current="page"]').innerText().then((s) => s.trim()), 'Image Resizer');
@@ -115,7 +115,7 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
   await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
   await page.keyboard.press('Control+k');
   await page.locator('.palette-box').waitFor();
-  assert.equal(await page.locator('#pal-list li').count(), 21);
+  assert.equal(await page.locator('#pal-list li').count(), 22);
   await page.keyboard.type('pdf');
   const n = await page.locator('#pal-list li[data-i]').count();
   assert.ok(n >= 6, `pdf matches ${n}`);
@@ -136,9 +136,9 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
 test('app: directory tabs and live filter work, and the filter is kept in the URL', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/tools`); await page.locator('#dir-q').waitFor();
-  assert.equal(await page.locator('#dir-grid .tcard').count(), 21);
+  assert.equal(await page.locator('#dir-grid .tcard').count(), 22);
   await page.goto(`${base}/#/pdf`); assert.equal(await page.locator('#dir-grid .tcard').count(), 10);
-  await page.goto(`${base}/#/image`); assert.equal(await page.locator('#dir-grid .tcard').count(), 6);
+  await page.goto(`${base}/#/image`); assert.equal(await page.locator('#dir-grid .tcard').count(), 7);
   await page.goto(`${base}/#/video`); assert.equal(await page.locator('#dir-grid .tcard').count(), 1);
   await page.goto(`${base}/#/calculator`); assert.equal(await page.locator('#dir-grid .tcard').count(), 4);
   await page.goto(`${base}/#/tools`); await page.locator('#dir-q').fill('base64');
@@ -1940,6 +1940,127 @@ test('Compress to Exact Size: can be cancelled, and is accessible in both themes
   await root(page).getByText('Cancelled.').waitFor({ timeout: 60000 });
   assert.equal(await root(page).locator('tbody tr').count(), 0);
   await btn(page, 'Make files fit').waitFor(); assert.equal(await btn(page, 'Make files fit').isDisabled(), false); // not stuck busy
+  await page.close();
+});
+
+/* ---------- Passport & ID Photo Maker ---------- */
+const pixelsOf = (page, b, pts) => page.evaluate(async ({ b64, pts }) => {
+  const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  const bmp = await createImageBitmap(new Blob([u])); const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+  const ctx = c.getContext('2d'); ctx.drawImage(bmp, 0, 0); return pts.map(([x, y]) => Array.from(ctx.getImageData(x, y, 1, 1).data.slice(0, 3)));
+}, { b64: b.toString('base64'), pts });
+const drawCount = async (b) => {
+  const d = await PDFDocument.load(b); const c = d.getPage(0).node.Contents();
+  const streams = c instanceof PDFArray ? c.asArray().map((r) => d.context.lookup(r)) : [c];
+  let t = ''; for (const st of streams) t += Buffer.from(decodePDFRawStream(st).decode()).toString('latin1');
+  return (t.match(/\/\S+ Do/g) || []).length;
+};
+const jfifDpi = (b) => ({ units: b[13], x: (b[14] << 8) | b[15], y: (b[16] << 8) | b[17] });
+const photoDl = (page) => download(page, () => btn(page, 'Download photo (JPG)').click());
+
+test('Passport Photo Maker: exact pixel size, 300 DPI stored, white background, custom size, zoom by keyboard', async () => {
+  const page = await openTool('passport-photo');
+  const src = await makeImage(page, { w: 800, h: 1000, type: 'image/png' });
+  await fileInput(page).setInputFiles([buf('me.png', src)]);
+  await root(page).locator('.idp-stage').waitFor();
+  assert.match(await root(page).locator('.hint[aria-live]').first().innerText(), /413 × 531 px at 300 DPI/);
+  let r = await photoDl(page);
+  assert.equal(r.name, 'me-35x45mm.jpg'); assert.equal(r.buf[0], 0xff);
+  assert.deepEqual(await dimsOf(page, r.buf), [413, 531]);
+  assert.deepEqual(jfifDpi(r.buf), { units: 1, x: 300, y: 300 });
+  const kept = await pixelsOf(page, r.buf, [[3, 3]]);
+  assert.ok(kept[0][2] > 150 && kept[0][0] < 100, `original blue kept: ${kept[0]}`);
+  // white background: border-connected blue goes white, the enclosed orange block survives
+  await page.getByLabel('Background', { exact: true }).selectOption('white');
+  await root(page).getByLabel('Clean-up strength').waitFor();
+  r = await photoDl(page);
+  const [corner, corner2, orange] = await pixelsOf(page, r.buf, [[3, 3], [408, 526], [143, 159]]);
+  assert.ok(corner.every((v) => v > 245), `corner ${corner}`); assert.ok(corner2.every((v) => v > 245), `corner2 ${corner2}`);
+  assert.ok(orange[0] > 200 && orange[2] < 100, `subject kept: ${orange}`);
+  // custom size
+  await page.getByLabel('Photo size').selectOption('custom');
+  await page.getByLabel('Width (mm)').fill('30'); await page.getByLabel('Height (mm)').fill('40');
+  r = await photoDl(page);
+  assert.equal(r.name, 'me-30x40mm.jpg'); assert.deepEqual(await dimsOf(page, r.buf), [354, 472]);
+  // US size
+  await page.getByLabel('Photo size').selectOption('2x2in');
+  r = await photoDl(page); assert.deepEqual(await dimsOf(page, r.buf), [600, 600]);
+  // keyboard zoom
+  await root(page).locator('.idp-stage').focus();
+  const before = Number(await page.getByLabel('Zoom', { exact: true }).inputValue());
+  await page.keyboard.press('+'); await page.keyboard.press('+');
+  assert.ok(Number(await page.getByLabel('Zoom', { exact: true }).inputValue()) > before);
+  await page.close();
+});
+
+test('Passport Photo Maker: dragging moves the picture, file size limit is honoured', async () => {
+  const page = await openTool('passport-photo');
+  const noisy = await makeImage(page, { w: 1000, h: 1250, type: 'image/jpeg', q: 0.95, noise: true });
+  await fileInput(page).setInputFiles([buf('big.jpg', noisy)]);
+  await root(page).locator('.idp-stage').waitFor();
+  await page.getByLabel('Zoom', { exact: true }).fill('300');
+  const snap = () => page.locator('.idp-stage canvas').evaluate((c) => c.toDataURL('image/png'));
+  await root(page).locator('.idp-stage').scrollIntoViewIfNeeded(); await page.waitForTimeout(200);
+  const a = await snap(); const box = await root(page).locator('.idp-stage').boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 - 60, box.y + box.height / 2 - 40, { steps: 5 }); await page.mouse.up();
+  await page.waitForTimeout(200);
+  assert.notEqual(await snap(), a, 'dragging should change what is framed');
+  // size limit
+  await page.getByLabel('File size limit (optional)').fill('30 KB');
+  const r = await photoDl(page);
+  assert.ok(r.buf.length <= 30 * 1024, `${r.buf.length}`);
+  const [w, h] = await dimsOf(page, r.buf); assert.ok(w < 413 && Math.abs(w / h - 35 / 45) < 0.02, `${w}x${h}`);
+  const d = jfifDpi(r.buf); assert.equal(d.x, d.y); assert.ok(d.x < 300 && d.x > 50, `dpi ${d.x}`); // physical size preserved when pixels shrink
+  await page.getByLabel('File size limit (optional)').fill('banana');
+  await btn(page, 'Download photo (JPG)').click();
+  await root(page).getByText(/Type a size limit/).waitFor();
+  await page.close();
+});
+
+test('Passport Photo Maker: print sheets as JPG and PDF with the right paper size and number of photos', async () => {
+  const page = await openTool('passport-photo');
+  await fileInput(page).setInputFiles([buf('me.png', await makeImage(page, { w: 800, h: 1000, type: 'image/png' }))]);
+  await root(page).locator('.idp-stage').waitFor();
+  assert.match(await root(page).getByText(/photos fit on this sheet/).innerText(), /6 photos fit/);
+  let r = await download(page, () => btn(page, 'Download sheet (JPG)').click());
+  assert.equal(r.name, 'me-35x45mm-sheet-4x6in.jpg'); assert.deepEqual(await dimsOf(page, r.buf), [1200, 1800]); assert.deepEqual(jfifDpi(r.buf), { units: 1, x: 300, y: 300 });
+  // blank margin is white and the first photo cell is not
+  const [margin, photo] = await pixelsOf(page, r.buf, [[2, 2], [400, 300]]);
+  assert.ok(margin.every((v) => v > 250), `margin ${margin}`); assert.ok(photo.some((v) => v < 200), `photo ${photo}`);
+  r = await download(page, () => btn(page, 'Download sheet (PDF)').click());
+  assert.equal(r.name, 'me-35x45mm-sheet-4x6in.pdf'); assert.ok(isPdf(r.buf));
+  const pdf = await PDFDocument.load(r.buf); const { width, height } = pdf.getPage(0).getSize();
+  assert.ok(Math.abs(width - 288) < 0.5 && Math.abs(height - 432) < 0.5, `${width}x${height}`);
+  assert.equal(await drawCount(r.buf), 6);
+  await page.getByLabel('Paper').selectOption('a4');
+  const many = Number((await root(page).getByText(/photos fit on this sheet/).innerText()).match(/(\d+) photos/)[1]);
+  assert.ok(many >= 16, `A4 holds ${many}`);
+  r = await download(page, () => btn(page, 'Download sheet (PDF)').click());
+  const a4 = (await PDFDocument.load(r.buf)).getPage(0).getSize(); assert.ok(Math.abs(a4.width - 595.28) < 0.5 && Math.abs(a4.height - 841.89) < 0.5, `${a4.width}x${a4.height}`);
+  assert.equal(await drawCount(r.buf), many);
+  // photo too big for the paper
+  await page.getByLabel('Photo size').selectOption('custom'); await page.getByLabel('Width (mm)').fill('200'); await page.getByLabel('Height (mm)').fill('200');
+  await page.getByLabel('Paper').selectOption('4x6in');
+  await root(page).getByText(/too big for that paper/).waitFor();
+  assert.equal(await btn(page, 'Download sheet (PDF)').isDisabled(), true);
+  await page.close();
+});
+
+test('Passport Photo Maker: accessible in both themes', async () => {
+  const page = await openTool('passport-photo');
+  await fileInput(page).setInputFiles([buf('me.png', await makeImage(page, { w: 800, h: 1000, type: 'image/png' }))]);
+  await root(page).locator('.idp-stage').waitFor();
+  await page.getByLabel('Background', { exact: true }).selectOption('white');
+  const scan = async (label) => {
+    await page.evaluate(axeSrc);
+    const res = await page.evaluate(() => axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] } }));
+    return res.violations.map((v) => `${label}: ${v.id} ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`);
+  };
+  let bad = await scan('light');
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; }); await page.waitForTimeout(300);
+  bad = bad.concat(await scan('dark'));
+  assert.deepEqual(bad, []);
   await page.close();
 });
 

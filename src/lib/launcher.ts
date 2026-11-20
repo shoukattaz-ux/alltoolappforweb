@@ -18,6 +18,7 @@ const PDF: Suggestion[] = [
 const IMAGE: Suggestion[] = [
   { slug: 'image-compressor', label: 'Make smaller', hint: 'Cut the file size', single: false },
   { slug: 'compress-to-size', label: 'Fit a size limit', hint: 'Get it under 50 KB, 100 KB…', single: false },
+  { slug: 'passport-photo', label: 'Make a passport or ID photo', hint: 'Crop, plain background, print sheet', single: true },
   { slug: 'image-resizer', label: 'Resize', hint: 'Exact pixels or a percentage', single: true },
   { slug: 'image-cropper', label: 'Crop', hint: 'Trim to a ratio or size', single: true },
   { slug: 'image-converter', label: 'Change format', hint: 'JPG, PNG or WebP', single: false },
