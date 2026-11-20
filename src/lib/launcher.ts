@@ -10,12 +10,14 @@ const PDF: Suggestion[] = [
   { slug: 'organize-pdf', label: 'Reorder or rotate pages', hint: 'Drag, rotate, delete, add blanks', single: true },
   { slug: 'extract-text', label: 'Extract the text', hint: 'OCR: copy text or make it searchable', single: true },
   { slug: 'compress-pdf', label: 'Make it smaller', hint: 'Shrink it for email', single: true },
+  { slug: 'compress-to-size', label: 'Fit a size limit', hint: 'Get it under 100 KB, 1 MB…', single: true },
   { slug: 'split-pdf', label: 'Pull out pages', hint: 'Keep only the pages you need', single: true },
   { slug: 'pdf-to-image', label: 'Turn pages into images', hint: 'Export JPG or PNG', single: true },
   { slug: 'merge-pdf', label: 'Combine PDFs', hint: 'Join files into one', single: false },
 ];
 const IMAGE: Suggestion[] = [
   { slug: 'image-compressor', label: 'Make smaller', hint: 'Cut the file size', single: false },
+  { slug: 'compress-to-size', label: 'Fit a size limit', hint: 'Get it under 50 KB, 100 KB…', single: false },
   { slug: 'image-resizer', label: 'Resize', hint: 'Exact pixels or a percentage', single: true },
   { slug: 'image-cropper', label: 'Crop', hint: 'Trim to a ratio or size', single: true },
   { slug: 'image-converter', label: 'Change format', hint: 'JPG, PNG or WebP', single: false },

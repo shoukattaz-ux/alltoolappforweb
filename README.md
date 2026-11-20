@@ -1,11 +1,11 @@
 # ToolHaven Studio
 
-One polished web app that brings every tool from the `alltools` site, plus a new video compressor, into a single, app-style workspace. All 20 tools run **entirely in the browser**: files are never uploaded.
+One polished web app that brings every tool from the `alltools` site, plus a new video compressor, into a single, app-style workspace. All 21 tools run **entirely in the browser**: files are never uploaded.
 
 | Category | Tools |
 | --- | --- |
 | PDF | **Read**, **Scan to PDF**, **Page Organizer**, **Extract Text / OCR (new)**, Merge, Sign, Split, Compress, PDF to image, Image to PDF |
-| Image | Compress, Resize, Crop, Convert format, Image to Base64 |
+| Image | **Compress to Exact Size (new)**, Compress, Resize, Crop, Convert format, Image to Base64 |
 | Video | Compress (quality preset or target size, resize, trim, MP4/WebM) |
 | Calculators | BMI, Percentage, Age, Discount |
 
@@ -16,6 +16,7 @@ One polished web app that brings every tool from the `alltools` site, plus a new
 - **Scan to PDF**: photograph paper and get a clean, straight PDF. It finds the page edges, corrects the perspective, removes shadows and whitens the paper (or gives crisp black and white), with draggable corner handles, rotate/reorder/delete, page size, margin and quality options, and a ZIP of page images. Pure on-device maths (no OpenCV). On Android, "Take a photo" opens the system camera app, so the app needs no camera permission.
 - **PDF Page Organizer**: thumbnails of every page; rotate, delete (restorable until saved), duplicate and add blank pages; drag to reorder with mouse, finger or keyboard; select all/none, reverse, undo; saves a new PDF and never touches the original.
 - **Open with / Share (Android)**: ToolHaven shows up in other apps' "Open with" and Share menus for PDFs, images and videos (file manager, WhatsApp, Gmail...), and offers the right tools for the file. No copy is made and no permission is needed.
+- **Compress to Exact Size**: get photos and PDFs under a limit (20 KB to 2 MB or your own) for forms and job portals. A search finds the best quality that still fits (quality first, then dimensions; PDFs try a lossless clean-up before page images); files already small enough are left alone; if a limit is unreachable it says so and offers the smallest version.
 - **Extract Text (OCR)**: copy text from photos, scans and scanned PDFs (English). Optional shadow clean-up first, editable text per page with a confidence score, copy / .txt download, and a **searchable PDF** (for a scanned PDF the original pages are kept and invisible text is layered on top). The engine (Tesseract in WebAssembly, about 10 MB) and the English model are bundled and served from the app itself: no CDN, no uploads.
 - Plain-language task buttons ("Make a PDF smaller", "Shrink a video"), a thumb-friendly bottom bar on phones, and confirmation messages.
 

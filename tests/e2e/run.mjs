@@ -76,7 +76,7 @@ const isPdf = (b) => b.subarray(0, 5).toString() === '%PDF-';
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 /* ---------- App shell tests ---------- */
-const ALL_TOOLS = ['extract-text', 'organize-pdf', 'scan-to-pdf', 'pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
+const ALL_TOOLS = ['extract-text', 'organize-pdf', 'scan-to-pdf', 'pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'compress-to-size', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
 const axeSrc = readFileSync(resolve(here, '../../node_modules/axe-core/axe.min.js'), 'utf8');
 
 test('app: every route mounts with one h1, no console errors, and all form controls are labelled', async () => {
@@ -97,12 +97,12 @@ test('app: every route mounts with one h1, no console errors, and all form contr
   await page.close();
 });
 
-test('app: dashboard lists all 20 tools; sidebar links every tool and marks the current one', async () => {
+test('app: dashboard lists all 21 tools; sidebar links every tool and marks the current one', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/`);
   await page.locator('.hero h1').waitFor();
-  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 20); // category sections only (favorites/recents may add more)
-  assert.equal(await page.locator('#nav .tool-link').count(), 20);
+  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 21); // category sections only (favorites/recents may add more)
+  assert.equal(await page.locator('#nav .tool-link').count(), 21);
   await page.goto(`${base}/#/tool/image-resizer`);
   await page.locator('#view h1').waitFor();
   assert.equal(await page.locator('#nav [aria-current="page"]').innerText().then((s) => s.trim()), 'Image Resizer');
@@ -115,7 +115,7 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
   await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
   await page.keyboard.press('Control+k');
   await page.locator('.palette-box').waitFor();
-  assert.equal(await page.locator('#pal-list li').count(), 20);
+  assert.equal(await page.locator('#pal-list li').count(), 21);
   await page.keyboard.type('pdf');
   const n = await page.locator('#pal-list li[data-i]').count();
   assert.ok(n >= 6, `pdf matches ${n}`);
@@ -136,9 +136,9 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
 test('app: directory tabs and live filter work, and the filter is kept in the URL', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/tools`); await page.locator('#dir-q').waitFor();
-  assert.equal(await page.locator('#dir-grid .tcard').count(), 20);
+  assert.equal(await page.locator('#dir-grid .tcard').count(), 21);
   await page.goto(`${base}/#/pdf`); assert.equal(await page.locator('#dir-grid .tcard').count(), 10);
-  await page.goto(`${base}/#/image`); assert.equal(await page.locator('#dir-grid .tcard').count(), 5);
+  await page.goto(`${base}/#/image`); assert.equal(await page.locator('#dir-grid .tcard').count(), 6);
   await page.goto(`${base}/#/video`); assert.equal(await page.locator('#dir-grid .tcard').count(), 1);
   await page.goto(`${base}/#/calculator`); assert.equal(await page.locator('#dir-grid .tcard').count(), 4);
   await page.goto(`${base}/#/tools`); await page.locator('#dir-q').fill('base64');
@@ -1277,7 +1277,7 @@ test('launcher: a dropped PDF offers the right tools, and the chosen tool opens 
   const res = page.locator('#launcher-result');
   await res.getByText('1 PDF').waitFor();
   const labels = await res.locator('.act strong').allInnerTexts();
-  assert.deepEqual(labels, ['Read it', 'Sign it', 'Reorder or rotate pages', 'Extract the text', 'Make it smaller', 'Pull out pages', 'Turn pages into images']);
+  assert.deepEqual(labels, ['Read it', 'Sign it', 'Reorder or rotate pages', 'Extract the text', 'Make it smaller', 'Fit a size limit', 'Pull out pages', 'Turn pages into images']);
   await res.getByRole('button', { name: /Make it smaller/ }).click();
   await page.waitForFunction(() => location.hash === '#/tool/compress-pdf');
   await page.locator('#tool-root').getByText(/3 pages/).waitFor({ timeout: 15000 });
@@ -1696,7 +1696,7 @@ test('Android share: a PDF that cold-starts the app is offered the right tools, 
   await page.waitForFunction(() => location.hash === '#/' || location.hash === ''); 
   await page.locator('#launcher-result').getByText('1 PDF').waitFor({ timeout: 15000 });
   await page.getByText(/Received 1 file from another app/).waitFor();
-  assert.deepEqual(await page.locator('#launcher-result .act strong').allInnerTexts(), ['Read it', 'Sign it', 'Reorder or rotate pages', 'Extract the text', 'Make it smaller', 'Pull out pages', 'Turn pages into images']);
+  assert.deepEqual(await page.locator('#launcher-result .act strong').allInnerTexts(), ['Read it', 'Sign it', 'Reorder or rotate pages', 'Extract the text', 'Make it smaller', 'Fit a size limit', 'Pull out pages', 'Turn pages into images']);
   await page.locator('#launcher-result').getByRole('button', { name: /Read it/ }).click();
   await page.waitForFunction(() => location.hash === '#/tool/pdf-reader');
   await page.locator('.rd-page canvas').first().waitFor({ timeout: 20000 }); assert.equal(await page.locator('.rd-total').innerText(), 'of 3');
@@ -1833,6 +1833,114 @@ test('accessibility: Extract Text with files chosen and with results (light and 
   await fileInput(page).first().setInputFiles([buf('words.png', await makeTextImage(page))]); await page.waitForTimeout(450); await scan('before reading'); await ocrRun(page); await page.waitForTimeout(450); await scan('with results');
   await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; }); await page.waitForTimeout(300); await scan('with results (dark theme)');
   await page.close(); assert.deepEqual(bad, []);
+});
+
+/* ---------- Compress to Exact Size ---------- */
+const KB = 1024;
+test('Compress to Exact Size: a photo is brought under the chosen limit, custom limits, honest when impossible', async () => {
+  const page = await openTool('compress-to-size');
+  const big = await makeImage(page, { w: 1600, h: 1200, type: 'image/jpeg', q: 0.98, noise: true });
+  const small = await makeImage(page, { w: 120, h: 80, type: 'image/png' });
+  await fileInput(page).setInputFiles([buf('photo.jpg', big)]);
+  await root(page).locator('.file-item').first().waitFor();
+  await root(page).getByRole('button', { name: '100 KB', exact: true }).click();
+  assert.equal(await root(page).getByRole('button', { name: '100 KB', exact: true }).getAttribute('aria-pressed'), 'true');
+  await btn(page, 'Make files fit').click();
+  await root(page).locator('tbody tr').first().waitFor({ timeout: 90000 });
+  assert.match(await root(page).locator('tbody tr').first().innerText(), /photo-100KB\.jpg[\s\S]*Fits/);
+  let r = await download(page, () => root(page).getByRole('button', { name: 'Download', exact: true }).first().click());
+  assert.ok(r.buf.length <= 100 * KB, `${r.buf.length} should be <= ${100 * KB}`);
+  assert.ok(r.buf.length > 40 * KB, `${r.buf.length} should not be wastefully small`);
+  assert.equal(r.buf[0], 0xff); assert.equal(r.name, 'photo-100KB.jpg');
+  // custom limit overrides the chips
+  await page.getByLabel('Or type your own limit').fill('50');
+  assert.equal(await root(page).getByRole('button', { name: '100 KB', exact: true }).getAttribute('aria-pressed'), 'false');
+  await btn(page, 'Make files fit').click();
+  await root(page).getByText(/photo-50KB\.jpg/).waitFor({ timeout: 90000 });
+  r = await download(page, () => root(page).getByRole('button', { name: 'Download', exact: true }).first().click());
+  assert.ok(r.buf.length <= 50 * KB, `${r.buf.length}`);
+  // WebP output
+  await page.getByLabel('Image format').selectOption('webp');
+  await btn(page, 'Make files fit').click();
+  await root(page).getByText(/photo-50KB\.webp/).waitFor({ timeout: 90000 });
+  r = await download(page, () => root(page).getByRole('button', { name: 'Download', exact: true }).first().click());
+  assert.ok(r.buf.length <= 50 * KB); assert.equal(r.buf.subarray(8, 12).toString(), 'WEBP');
+  // impossible limit: told plainly, smallest version still offered
+  await page.getByLabel('Or type your own limit').fill('3 KB');
+  await btn(page, 'Make files fit').click();
+  await root(page).locator('.notice-warn').waitFor({ timeout: 90000 });
+  assert.match(await root(page).locator('.notice-warn').innerText(), /could not get that small/);
+  assert.match(await root(page).locator('tbody tr').first().innerText(), /Over 3(\.0+)? KB/);
+  // bad limits
+  await page.getByLabel('Or type your own limit').fill('lots');
+  await btn(page, 'Make files fit').click();
+  await root(page).getByText(/Type a size like 75 KB/).waitFor();
+  await page.getByLabel('Or type your own limit').fill('1');
+  await btn(page, 'Make files fit').click();
+  await root(page).getByText(/under 2 KB/).waitFor();
+  // a file already under the limit is returned unchanged, with its own name
+  await page.getByLabel('Or type your own limit').fill('2 MB');
+  await root(page).locator('.file-item .icon-btn').first().click();
+  await fileInput(page).setInputFiles([buf('tiny.png', small)]);
+  await root(page).locator('.file-item').first().waitFor();
+  await btn(page, 'Make files fit').click();
+  await root(page).getByText(/left unchanged/).waitFor({ timeout: 30000 });
+  r = await download(page, () => root(page).getByRole('button', { name: 'Download', exact: true }).first().click());
+  assert.equal(r.name, 'tiny.png'); assert.ok(r.buf.equals(small));
+  await page.close();
+});
+
+test('Compress to Exact Size: a scanned PDF is brought under the limit, page count and size kept', async () => {
+  const page = await openTool('compress-to-size');
+  const noisy = await makeImage(page, { w: 900, h: 900, type: 'image/jpeg', q: 0.97, noise: true });
+  const doc = await PDFDocument.create();
+  for (let i = 0; i < 3; i++) { const img = await doc.embedJpg(noisy); doc.addPage([400, 500]).drawImage(img, { x: 0, y: 0, width: 400, height: 500 }); }
+  const src = Buffer.from(await doc.save());
+  assert.ok(src.length > 300 * KB, `fixture is ${src.length}`);
+  await fileInput(page).setInputFiles([buf('certs.pdf', src)]);
+  await root(page).locator('.file-item').first().waitFor();
+  await root(page).getByRole('button', { name: '200 KB', exact: true }).click();
+  await btn(page, 'Make files fit').click();
+  await root(page).locator('tbody tr').first().waitFor({ timeout: 120000 });
+  assert.match(await root(page).locator('tbody tr').first().innerText(), /certs-200KB\.pdf[\s\S]*Fits/);
+  const r = await download(page, () => root(page).getByRole('button', { name: 'Download', exact: true }).first().click());
+  assert.ok(isPdf(r.buf)); assert.ok(r.buf.length <= 200 * KB, `${r.buf.length}`);
+  const out = await PDFDocument.load(r.buf);
+  assert.equal(out.getPageCount(), 3);
+  assert.deepEqual([Math.round(out.getPage(0).getWidth()), Math.round(out.getPage(0).getHeight())], [400, 500]);
+  // mixed batch -> ZIP
+  await fileInput(page).setInputFiles([buf('photo.jpg', await makeImage(page, { w: 1200, h: 900, type: 'image/jpeg', q: 0.98, noise: true }))]);
+  await root(page).locator('.file-item').nth(1).waitFor();
+  await btn(page, 'Make files fit').click();
+  await root(page).locator('tbody tr').nth(1).waitFor({ timeout: 120000 });
+  const z = await download(page, () => btn(page, 'Download all as ZIP').click());
+  assert.deepEqual(Object.keys((await JSZip.loadAsync(z.buf)).files).sort(), ['certs-200KB.pdf', 'photo-200KB.jpg']);
+  await page.close();
+});
+
+test('Compress to Exact Size: can be cancelled, and is accessible in both themes', async () => {
+  const page = await openTool('compress-to-size');
+  const noisy = await makeImage(page, { w: 900, h: 900, type: 'image/jpeg', q: 0.97, noise: true });
+  const doc = await PDFDocument.create();
+  for (let i = 0; i < 12; i++) { const img = await doc.embedJpg(noisy); doc.addPage([400, 500]).drawImage(img, { x: 0, y: 0, width: 400, height: 500 }); }
+  await fileInput(page).setInputFiles([buf('long.pdf', Buffer.from(await doc.save()))]);
+  await root(page).locator('.file-item').first().waitFor();
+  const scan = async (label) => {
+    await page.evaluate(axeSrc);
+    const res = await page.evaluate(() => axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] } }));
+    return res.violations.map((v) => `${label}: ${v.id} ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`);
+  };
+  let bad = await scan('light');
+  await root(page).getByRole('button', { name: '50 KB', exact: true }).click();
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; }); await page.waitForTimeout(300);
+  bad = bad.concat(await scan('dark'));
+  assert.deepEqual(bad, []);
+  await btn(page, 'Make files fit').click();
+  await btn(page, 'Cancel').click();
+  await root(page).getByText('Cancelled.').waitFor({ timeout: 60000 });
+  assert.equal(await root(page).locator('tbody tr').count(), 0);
+  await btn(page, 'Make files fit').waitFor(); assert.equal(await btn(page, 'Make files fit').isDisabled(), false); // not stuck busy
+  await page.close();
 });
 
 /* ---------- runner ---------- */

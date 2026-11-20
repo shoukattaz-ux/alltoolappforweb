@@ -277,3 +277,10 @@ noscript .notice { margin: 12px 0; }
 .stack > * + * { margin-top: 16px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 @media print { .site-header, .site-footer, .consent, .ad, .sidebar { display: none !important; } body { background: #fff; } }
+
+/* Size-limit chips (Compress to Exact Size) */
+.size-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.size-chip { font: inherit; font-weight: 650; font-size: .92rem; min-height: 44px; padding: 8px 16px; border-radius: 99px; cursor: pointer; background: var(--surface); color: var(--ink); border: 1px solid var(--line-2); }
+.size-chip:hover { background: var(--brand-50); border-color: var(--brand-300); }
+.size-chip[aria-pressed="true"] { background: var(--brand-700); color: #fff; border-color: var(--brand-700); }
+:root[data-theme="dark"] .size-chip[aria-pressed="true"] { background: var(--brand-200); color: #fff; border-color: var(--brand-300); }

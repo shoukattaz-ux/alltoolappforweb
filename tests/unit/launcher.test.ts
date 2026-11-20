@@ -5,7 +5,7 @@ const slugs = (k: Parameters<typeof suggest>[0]) => suggest(k).suggestions.map((
 
 describe('launcher suggestions', () => {
   it('one PDF offers read/sign/compress/split/images but not "combine"', () => {
-    expect(slugs(['pdf'])).toEqual(['pdf-reader', 'sign-pdf', 'organize-pdf', 'extract-text', 'compress-pdf', 'split-pdf', 'pdf-to-image']);
+    expect(slugs(['pdf'])).toEqual(['pdf-reader', 'sign-pdf', 'organize-pdf', 'extract-text', 'compress-pdf', 'compress-to-size', 'split-pdf', 'pdf-to-image']);
   });
   it('two PDFs put "combine" first (multi-file tools lead)', () => {
     const s = slugs(['pdf', 'pdf']); expect(s[0]).toBe('merge-pdf'); expect(s).toContain('pdf-reader');
