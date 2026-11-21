@@ -3,6 +3,7 @@
 import { chromium } from 'playwright-core';
 import { PDFDocument, PDFArray, rgb, StandardFonts, degrees, decodePDFRawStream } from 'pdf-lib';
 import JSZip from 'jszip';
+import jsQR from 'jsqr';
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
@@ -76,7 +77,7 @@ const isPdf = (b) => b.subarray(0, 5).toString() === '%PDF-';
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 /* ---------- App shell tests ---------- */
-const ALL_TOOLS = ['extract-text', 'organize-pdf', 'scan-to-pdf', 'pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'compress-to-size', 'passport-photo', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
+const ALL_TOOLS = ['extract-text', 'organize-pdf', 'scan-to-pdf', 'pdf-reader', 'merge-pdf', 'sign-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-image', 'image-to-pdf', 'image-compressor', 'compress-to-size', 'passport-photo', 'qr-code-generator', 'image-resizer', 'image-cropper', 'image-converter', 'image-to-base64', 'video-compressor', 'bmi-calculator', 'percentage-calculator', 'age-calculator', 'discount-calculator'];
 const axeSrc = readFileSync(resolve(here, '../../node_modules/axe-core/axe.min.js'), 'utf8');
 
 test('app: every route mounts with one h1, no console errors, and all form controls are labelled', async () => {
@@ -97,12 +98,12 @@ test('app: every route mounts with one h1, no console errors, and all form contr
   await page.close();
 });
 
-test('app: dashboard lists all 22 tools; sidebar links every tool and marks the current one', async () => {
+test('app: dashboard lists all 23 tools; sidebar links every tool and marks the current one', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/`);
   await page.locator('.hero h1').waitFor();
-  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 22); // category sections only (favorites/recents may add more)
-  assert.equal(await page.locator('#nav .tool-link').count(), 22);
+  assert.equal(await page.locator('.block-blurb + .tgrid .tcard').count(), 23); // category sections only (favorites/recents may add more)
+  assert.equal(await page.locator('#nav .tool-link').count(), 23);
   await page.goto(`${base}/#/tool/image-resizer`);
   await page.locator('#view h1').waitFor();
   assert.equal(await page.locator('#nav [aria-current="page"]').innerText().then((s) => s.trim()), 'Image Resizer');
@@ -115,7 +116,7 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
   await page.goto(`${base}/#/`); await page.locator('.hero h1').waitFor();
   await page.keyboard.press('Control+k');
   await page.locator('.palette-box').waitFor();
-  assert.equal(await page.locator('#pal-list li').count(), 22);
+  assert.equal(await page.locator('#pal-list li').count(), 23);
   await page.keyboard.type('pdf');
   const n = await page.locator('#pal-list li[data-i]').count();
   assert.ok(n >= 6, `pdf matches ${n}`);
@@ -136,9 +137,9 @@ test('app: command palette opens with Ctrl+K and /, searches, navigates with arr
 test('app: directory tabs and live filter work, and the filter is kept in the URL', async () => {
   const page = await newPage();
   await page.goto(`${base}/#/tools`); await page.locator('#dir-q').waitFor();
-  assert.equal(await page.locator('#dir-grid .tcard').count(), 22);
+  assert.equal(await page.locator('#dir-grid .tcard').count(), 23);
   await page.goto(`${base}/#/pdf`); assert.equal(await page.locator('#dir-grid .tcard').count(), 10);
-  await page.goto(`${base}/#/image`); assert.equal(await page.locator('#dir-grid .tcard').count(), 7);
+  await page.goto(`${base}/#/image`); assert.equal(await page.locator('#dir-grid .tcard').count(), 8);
   await page.goto(`${base}/#/video`); assert.equal(await page.locator('#dir-grid .tcard').count(), 1);
   await page.goto(`${base}/#/calculator`); assert.equal(await page.locator('#dir-grid .tcard').count(), 4);
   await page.goto(`${base}/#/tools`); await page.locator('#dir-q').fill('base64');
@@ -2060,6 +2061,101 @@ test('Passport Photo Maker: accessible in both themes', async () => {
   let bad = await scan('light');
   await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; }); await page.waitForTimeout(300);
   bad = bad.concat(await scan('dark'));
+  assert.deepEqual(bad, []);
+  await page.close();
+});
+
+/* ---------- QR Code Generator ---------- */
+/** Reads a QR code out of PNG bytes with an independent decoder, so we test what the user actually downloads. */
+async function decodeQrPng(page, b) {
+  const px = await page.evaluate(async (b64) => {
+    const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    const bmp = await createImageBitmap(new Blob([u])); const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+    const ctx = c.getContext('2d'); ctx.drawImage(bmp, 0, 0); const d = ctx.getImageData(0, 0, c.width, c.height);
+    let str = ''; for (let i = 0; i < d.data.length; i += 0x8000) str += String.fromCharCode(...d.data.subarray(i, i + 0x8000));
+    return { w: c.width, h: c.height, b64: btoa(str) };
+  }, b.toString('base64'));
+  return jsQR(new Uint8ClampedArray(Buffer.from(px.b64, 'base64')), px.w, px.h)?.data ?? null;
+}
+const qrPng = (page) => download(page, () => btn(page, 'Download PNG').click());
+
+test('QR Code Generator: link, text in any language, Wi-Fi, contact, email and phone all scan back to the right content', async () => {
+  const page = await openTool('qr-code-generator');
+  const ta = page.getByLabel('Link or text');
+  assert.equal(await btn(page, 'Download PNG').isDisabled(), true); // nothing typed yet
+  await ta.fill('example.com/menu');
+  await root(page).getByText('Added https:// so phones open it as a link.').waitFor();
+  let r = await qrPng(page);
+  assert.equal(r.name, 'qr-code-link.png'); assert.equal(r.buf.subarray(1, 4).toString(), 'PNG');
+  assert.equal(await decodeQrPng(page, r.buf), 'https://example.com/menu');
+  await ta.fill('سلام دنیا ☕ Café');
+  assert.equal(await decodeQrPng(page, (await qrPng(page)).buf), 'سلام دنیا ☕ Café');
+  // Wi-Fi
+  await page.getByLabel('What is the code for?').selectOption('wifi');
+  assert.equal(await btn(page, 'Download PNG').isDisabled(), true);
+  await page.getByLabel('Network name (SSID)').fill('Home;Net'); await page.getByLabel('Password').fill('p@ss:word');
+  r = await qrPng(page); assert.equal(r.name, 'qr-code-wifi.png');
+  assert.equal(await decodeQrPng(page, r.buf), 'WIFI:T:WPA;S:Home\\;Net;P:p@ss\\:word;;');
+  await page.getByLabel('Security').selectOption('nopass'); await page.getByLabel('Hidden network').check();
+  assert.equal(await decodeQrPng(page, (await qrPng(page)).buf), 'WIFI:T:nopass;S:Home\\;Net;H:true;;');
+  // Contact
+  await page.getByLabel('What is the code for?').selectOption('contact');
+  await page.getByLabel('First name').fill('Ali'); await page.getByLabel('Last name').fill('Khan'); await page.getByLabel('Phone', { exact: true }).fill('+92 300 1234567'); await page.getByLabel('Email', { exact: true }).fill('ali@example.com');
+  const card = await decodeQrPng(page, (await qrPng(page)).buf);
+  assert.match(card, /^BEGIN:VCARD\r\nVERSION:3\.0\r\nN:Khan;Ali;;;\r\nFN:Ali Khan\r\nTEL:\+923001234567\r\nEMAIL:ali@example\.com\r\nEND:VCARD$/);
+  // Email and phone
+  await page.getByLabel('What is the code for?').selectOption('email');
+  await page.getByLabel('To', { exact: true }).fill('hello@example.com'); await page.getByLabel('Subject').fill('Hi & welcome');
+  assert.equal(await decodeQrPng(page, (await qrPng(page)).buf), 'mailto:hello@example.com?subject=Hi%20%26%20welcome');
+  await page.getByLabel('What is the code for?').selectOption('phone');
+  await page.getByLabel('Phone number').fill('+92 (300) 123-4567');
+  assert.equal(await decodeQrPng(page, (await qrPng(page)).buf), 'tel:+923001234567');
+  await page.close();
+});
+
+test('QR Code Generator: sizes, SVG download, colour warnings, too-long text', async () => {
+  const page = await openTool('qr-code-generator');
+  await page.getByLabel('Link or text').fill('https://example.com');
+  await page.getByLabel('Size', { exact: true }).selectOption('1200');
+  let r = await qrPng(page); const [w, h] = await dimsOf(page, r.buf);
+  assert.equal(w, h); assert.ok(w <= 1200 && w > 1100, `${w}`); // whole pixels per square, as close to the size asked as possible
+  assert.equal(await decodeQrPng(page, r.buf), 'https://example.com');
+  r = await download(page, () => btn(page, 'Download SVG').click());
+  const svg = r.buf.toString(); assert.equal(r.name, 'qr-code-link.svg'); assert.match(svg, /^<svg [^>]*viewBox="0 0 \d+ \d+"/); assert.ok(svg.includes('<path d="M'));
+  // colours: custom dark-on-light is fine and is used; light-on-dark warns; low contrast warns
+  await page.getByLabel('Code colour').fill('#1a237e'); await page.getByLabel('Background colour').fill('#fff8e1');
+  assert.equal(await root(page).locator('.notice-warn').isVisible(), false);
+  assert.match((await download(page, () => btn(page, 'Download SVG').click())).buf.toString(), /fill="#1a237e"/);
+  assert.equal(await decodeQrPng(page, (await qrPng(page)).buf), 'https://example.com');
+  await page.getByLabel('Code colour').fill('#ffffff'); await page.getByLabel('Background colour').fill('#000000');
+  await root(page).getByText(/not read by every scanner/).waitFor();
+  await page.getByLabel('Code colour').fill('#777777'); await page.getByLabel('Background colour').fill('#888888');
+  await root(page).getByText(/too close together/).waitFor();
+  await page.getByLabel('Code colour').fill('#000000'); await page.getByLabel('Background colour').fill('#ffffff');
+  assert.equal(await root(page).locator('.notice-warn').isVisible(), false);
+  // too much data for the chosen error correction
+  await page.getByLabel('Error correction').selectOption('H');
+  await page.getByLabel('Link or text').fill('x'.repeat(2000));
+  await root(page).getByText(/too much for one QR code/).waitFor();
+  assert.equal(await btn(page, 'Download PNG').isDisabled(), true);
+  await page.getByLabel('Error correction').selectOption('L');
+  await root(page).getByText(/too much for one QR code/).waitFor({ state: 'detached' });
+  assert.equal(await btn(page, 'Download PNG').isDisabled(), false);
+  await page.close();
+});
+
+test('QR Code Generator: accessible in both themes', async () => {
+  const page = await openTool('qr-code-generator');
+  await page.getByLabel('Link or text').fill('https://example.com');
+  const scan = async (label) => {
+    await page.evaluate(axeSrc);
+    const res = await page.evaluate(() => axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] } }));
+    return res.violations.map((v) => `${label}: ${v.id} ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`);
+  };
+  let bad = [];
+  for (const t of ['link', 'wifi', 'contact', 'email', 'phone']) { await page.getByLabel('What is the code for?').selectOption(t); bad = bad.concat(await scan(`light ${t}`)); }
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; }); await page.waitForTimeout(300);
+  for (const t of ['link', 'wifi']) { await page.getByLabel('What is the code for?').selectOption(t); bad = bad.concat(await scan(`dark ${t}`)); }
   assert.deepEqual(bad, []);
   await page.close();
 });
