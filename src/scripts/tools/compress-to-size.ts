@@ -133,7 +133,7 @@ export function mount(root: HTMLElement) {
     const miss = results.filter((r) => !r.fits).length;
     status.show(miss ? 'warn' : 'success', miss
       ? `${results.length - miss} of ${results.length} files fit ${formatBytes(target)}. ${miss === 1 ? 'One file' : `${miss} files`} could not get that small without becoming unreadable: the smallest version is offered below.`
-      : `Done. ${results.length === 1 ? 'The file fits' : `All ${results.length} files fit`} within ${formatBytes(target)}.`);
+      : results.length === 1 ? `Done: ${formatBytes(results[0].original)} → ${formatBytes(results[0].blob.size)}, within the ${formatBytes(target)} limit.` : `Done. All ${results.length} files fit within ${formatBytes(target)}.`);
     const rows = results.map((r) => h('tr', null,
       h('td', { text: r.name }), h('td', { text: formatBytes(r.original) }), h('td', { text: formatBytes(r.blob.size) }),
       h('td', { class: r.fits ? 'saving-good' : 'saving-bad', text: r.fits ? `Fits ${formatBytes(r.target)}` : `Over ${formatBytes(r.target)}` }),

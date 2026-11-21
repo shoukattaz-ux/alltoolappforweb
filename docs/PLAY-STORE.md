@@ -10,7 +10,7 @@ Everything the repo can prepare is already done: a signed-release build, store g
 | Public contact email | babaralikhan5551@gmail.com |
 | Privacy policy URL (after step 3) | https://shoukattaz-ux.github.io/alltoolappforweb/privacy.html |
 
-Ready-made files: `store/listing.json` (all store text), `store/icon-512.png`, `store/feature-graphic-1024x500.png`, `store/screenshots/` (6 phone screenshots, 1080x1920).
+Ready-made files: `store/listing.json` (all store text), `store/icon-512.png`, `store/feature-graphic-1024x500.png`, `store/screenshots/` (8 phone screenshots, 1080x1920: dashboard, PDF reader, scan, OCR, compress to size, passport photo, QR code, tool search).
 
 ## 1. Create your Google Play developer account
 

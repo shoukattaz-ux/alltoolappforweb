@@ -35,7 +35,7 @@ const browser = await chromium.launch({ executablePath: exe, args: ['--no-sandbo
     <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.13) 2px,transparent 2px);background-size:30px 30px;mask-image:linear-gradient(120deg,transparent 35%,#000)"></div>
     <div style="position:relative;display:flex;align-items:center;gap:18px"><svg width="68" height="68" viewBox="0 0 36 36"><rect width="36" height="36" rx="10" fill="#fff" fill-opacity=".16"/>${BARS}</svg><div style="font-size:52px;font-weight:800;letter-spacing:-1.2px">${name}</div></div>
     <div style="position:relative;font-size:56px;font-weight:800;line-height:1.08;letter-spacing:-1.6px;margin-top:30px">Every tool you need.<br><span style="background:linear-gradient(100deg,#a5f3fc,#c4b5fd 60%,#fbcfe8);-webkit-background-clip:text;color:transparent">Private by design.</span></div>
-    <div style="position:relative;display:flex;gap:12px;margin-top:30px">${chip('PDF', '#fecdd3')}${chip('Video', '#ddd6fe')}${chip('Image', '#99f6e4')}${chip('Calculators', '#fde68a')}</div></body></html>`);
+    <div style="position:relative;display:flex;gap:12px;margin-top:30px">${chip('PDF', '#fecdd3')}${chip('Scan', '#fde68a')}${chip('Photo ID', '#99f6e4')}${chip('QR codes', '#c4b5fd')}${chip('Video', '#fbcfe8')}</div></body></html>`);
   writeFileSync(resolve(out, 'feature-graphic-1024x500.png'), await page.screenshot());
   await page.close();
 }
@@ -72,58 +72,67 @@ const makeScanPhoto = (pg) => pg.evaluate(async () => {
 // 1. Dashboard
 await page.goto(base); await page.locator('.hero h1').waitFor(); await snap('phone-1-dashboard.png');
 
-// 2. "Start with a file" suggestions
-await page.locator('#launcher-input').setInputFiles({ name: 'contract.pdf', mimeType: 'application/pdf', buffer: await mkPdf() });
-await page.locator('#launcher-result .act').first().waitFor();
-await page.evaluate(() => { document.querySelector('.launcher').scrollIntoView({ block: 'start' }); window.scrollBy(0, -76); });
-await snap('phone-2-start-with-a-file.png');
-
-// 3. PDF reader with the sample document and a search
+// 2. PDF reader with the sample document and a search
 await page.goto(`${base}#/tool/pdf-reader`); await page.locator('input[type=file]').waitFor({ state: 'attached' });
 await page.getByRole('button', { name: 'Try a sample document' }).click(); await page.locator('.rd-page canvas').first().waitFor({ timeout: 20000 });
 await page.locator('.rd-search').fill('agreement'); await page.waitForFunction(() => /\d+ of \d+/.test(document.querySelector('.rd-count')?.textContent ?? ''), null, { timeout: 15000 });
-await page.evaluate(() => { document.querySelector('.rd').scrollIntoView({ block: 'start' }); window.scrollBy(0, -70); }); await snap('phone-3-pdf-reader.png');
+await page.evaluate(() => { document.querySelector('.rd').scrollIntoView({ block: 'start' }); window.scrollBy(0, -70); }); await snap('phone-2-pdf-reader.png');
 
-// 4. Scan to PDF: a tilted photo, straightened and cleaned
+// 3. Scan to PDF: a tilted photo, straightened and cleaned
 await page.goto(`${base}#/tool/scan-to-pdf`); await page.locator('input[type=file]').first().waitFor({ state: 'attached' });
 await page.locator('#tool-root input[type=file]').first().setInputFiles({ name: 'desk.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await makeScanPhoto(page), 'base64') });
 await page.locator('.sc-preview').waitFor({ state: 'visible', timeout: 30000 }); await page.waitForFunction(() => document.querySelector('.sc-preview')?.width > 0);
-await page.waitForTimeout(900); await page.evaluate(() => { const t = document.querySelector('.sc-preview-box').getBoundingClientRect().top + window.scrollY - 150; window.scrollTo(0, Math.max(0, t)); }); await snap('phone-4-scan-to-pdf.png');
+await page.waitForTimeout(900); await page.evaluate(() => { const t = document.querySelector('.sc-preview-box').getBoundingClientRect().top + window.scrollY - 150; window.scrollTo(0, Math.max(0, t)); }); await snap('phone-3-scan-to-pdf.png');
 
-// 5. Extract text (OCR): a clean picture of text, recognised on the device
+// 4. Extract text (OCR): a clean picture of text, recognised on the device
 await page.goto(`${base}#/tool/extract-text`); await page.locator('input[type=file]').first().waitFor({ state: 'attached' });
 const textPng = await page.evaluate(async () => { const c = document.createElement('canvas'); c.width = 1200; c.height = 420; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 1200, 420); x.fillStyle = '#111'; x.font = '54px Arial'; x.fillText('Meeting notes: Friday', 40, 110); x.fillText('Send the invoice by noon.', 40, 200); x.font = '36px Georgia'; x.fillText('Total due on Friday: 480 dollars', 40, 300); const blob = await new Promise((r) => c.toBlob(r)); const u = new Uint8Array(await blob.arrayBuffer()); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); });
 await page.locator('#tool-root input[type=file]').first().setInputFiles({ name: 'notes.png', mimeType: 'image/png', buffer: Buffer.from(textPng, 'base64') });
 await page.getByRole('button', { name: 'Recognize text' }).click(); await page.locator('.ocr-text').first().waitFor({ timeout: 120000 });
-await page.waitForTimeout(600); await page.evaluate(() => { const t = document.querySelector('.ocr-out').getBoundingClientRect().top + window.scrollY - 150; window.scrollTo(0, Math.max(0, t)); }); await snap('phone-5-extract-text.png');
+await page.waitForTimeout(600); await page.evaluate(() => { const t = document.querySelector('.ocr-out').getBoundingClientRect().top + window.scrollY - 150; window.scrollTo(0, Math.max(0, t)); }); await snap('phone-4-extract-text.png');
 
-// 6. Video compressor with a clip loaded
-await page.goto(`${base}#/tool/video-compressor`); await page.locator('input[type=file]').waitFor({ state: 'attached' });
-const clip = await page.evaluate(async () => {
-  const c = document.createElement('canvas'); c.width = 1280; c.height = 720; const x = c.getContext('2d'); const s = c.captureStream(30);
-  const r = new MediaRecorder(s, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 4_000_000 }); const ch = []; r.ondataavailable = (e) => ch.push(e.data); const done = new Promise((z) => (r.onstop = z)); r.start(200);
-  const t0 = performance.now(); await new Promise((res) => { const f = () => { const t = (performance.now() - t0) / 1000; const g = x.createLinearGradient(0, 0, 1280, 720); g.addColorStop(0, `hsl(${(t * 60) % 360} 70% 50%)`); g.addColorStop(1, `hsl(${(t * 60 + 120) % 360} 70% 40%)`); x.fillStyle = g; x.fillRect(0, 0, 1280, 720); for (let i = 0; i < 25; i++) { x.fillStyle = `hsla(${i * 14} 90% 70% / .7)`; x.beginPath(); x.arc((i * 131 + t * 220) % 1280, 360 + Math.sin(t * 2 + i) * 240, 40 + (i % 5) * 12, 0, 7); x.fill(); } t < 3 ? requestAnimationFrame(f) : res(); }; f(); });
-  r.stop(); await done; const u = new Uint8Array(await new Blob(ch).arrayBuffer()); let q = ''; for (let i = 0; i < u.length; i += 0x8000) q += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(q);
+// 5. Compress to Exact Size: a heavy photo brought under 100 KB
+await page.goto(`${base}#/tool/compress-to-size`); await page.locator('input[type=file]').waitFor({ state: 'attached' });
+const heavy = await page.evaluate(async () => {
+  const c = document.createElement('canvas'); c.width = 2400; c.height = 1800; const x = c.getContext('2d');
+  const sky = x.createLinearGradient(0, 0, 0, 1800); sky.addColorStop(0, '#1e3a8a'); sky.addColorStop(.55, '#f59e0b'); sky.addColorStop(1, '#7c2d12'); x.fillStyle = sky; x.fillRect(0, 0, 2400, 1800);
+  x.fillStyle = '#0b1020'; x.beginPath(); x.moveTo(0, 1800); for (let i = 0; i <= 24; i++) x.lineTo(i * 100, 1150 + Math.sin(i * 1.3) * 150 + (i % 3) * 50); x.lineTo(2400, 1800); x.fill();
+  for (let i = 0; i < 90000; i++) { x.fillStyle = `rgba(255,255,255,${Math.random() * .18})`; x.fillRect(Math.random() * 2400, Math.random() * 1800, 3, 3); }
+  const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.95)); const u = new Uint8Array(await blob.arrayBuffer()); let q = ''; for (let i = 0; i < u.length; i += 0x8000) q += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(q);
 });
-await page.locator('input[type=file]').setInputFiles({ name: 'holiday.webm', mimeType: 'video/webm', buffer: Buffer.from(clip, 'base64') });
-await page.locator('.video-info').waitFor({ timeout: 30000 }); await page.evaluate(() => { document.querySelector('.video-info').scrollIntoView({ block: 'start' }); window.scrollBy(0, -84); }); await snap('phone-6-video-compressor.png');
+await page.locator('#tool-root input[type=file]').setInputFiles({ name: 'form-photo.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(heavy, 'base64') });
+await page.locator('.size-chip').first().waitFor(); await page.getByRole('button', { name: '100 KB', exact: true }).click();
+await page.getByRole('button', { name: 'Make files fit' }).click(); await page.locator('#tool-root table').waitFor({ timeout: 60000 });
+await page.evaluate(() => { const t = document.querySelector('#tool-root .notice').getBoundingClientRect().top + window.scrollY - 100; window.scrollTo(0, Math.max(0, t)); }); await snap('phone-5-compress-to-size.png');
 
-// 7. Image compressor result
-await page.goto(`${base}#/tool/image-compressor`); await page.locator('input[type=file]').waitFor({ state: 'attached' });
-const photo = await page.evaluate(async () => {
-  const c = document.createElement('canvas'); c.width = 2000; c.height = 1400; const x = c.getContext('2d');
-  const sky = x.createLinearGradient(0, 0, 0, 1400); sky.addColorStop(0, '#1e3a8a'); sky.addColorStop(.55, '#f59e0b'); sky.addColorStop(1, '#7c2d12'); x.fillStyle = sky; x.fillRect(0, 0, 2000, 1400);
-  x.fillStyle = '#0b1020'; x.beginPath(); x.moveTo(0, 1400); for (let i = 0; i <= 20; i++) x.lineTo(i * 100, 900 + Math.sin(i * 1.3) * 120 + (i % 3) * 40); x.lineTo(2000, 1400); x.fill();
-  for (let i = 0; i < 4000; i++) { x.fillStyle = `rgba(255,255,255,${Math.random() * .15})`; x.fillRect(Math.random() * 2000, Math.random() * 900, 2, 2); }
+// 6. Passport & ID photo: a generated portrait (an illustration, nothing real), framed, with a white background and the face guide
+await page.goto(`${base}#/tool/passport-photo`); await page.locator('input[type=file]').waitFor({ state: 'attached' });
+const portrait = await page.evaluate(async () => {
+  const c = document.createElement('canvas'); c.width = 1200; c.height = 1500; const x = c.getContext('2d');
+  x.fillStyle = '#8fb4e0'; x.fillRect(0, 0, 1200, 1500);
+  x.fillStyle = '#243b6b'; x.beginPath(); x.moveTo(120, 1500); x.quadraticCurveTo(160, 1030, 600, 1000); x.quadraticCurveTo(1040, 1030, 1080, 1500); x.fill();
+  x.fillStyle = '#e9c3a1'; x.fillRect(535, 840, 130, 200);
+  x.fillStyle = '#3b2a20'; x.beginPath(); x.ellipse(600, 590, 255, 300, 0, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#efc9a8'; x.beginPath(); x.ellipse(600, 640, 215, 270, 0, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#3b2a20'; x.beginPath(); x.ellipse(600, 440, 235, 120, 0, Math.PI, 0); x.fill();
+  x.fillStyle = '#2a1d17'; for (const ex of [515, 685]) { x.beginPath(); x.ellipse(ex, 640, 22, 12, 0, 0, Math.PI * 2); x.fill(); }
+  x.strokeStyle = '#b5705a'; x.lineWidth = 8; x.lineCap = 'round'; x.beginPath(); x.moveTo(540, 800); x.quadraticCurveTo(600, 835, 660, 800); x.stroke();
   const blob = await new Promise((r) => c.toBlob(r, 'image/png')); const u = new Uint8Array(await blob.arrayBuffer()); let q = ''; for (let i = 0; i < u.length; i += 0x8000) q += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(q);
 });
-await page.locator('input[type=file]').setInputFiles({ name: 'sunset.png', mimeType: 'image/png', buffer: Buffer.from(photo, 'base64') });
-await page.locator('#tool-root select').first().selectOption('jpeg');
-await page.getByRole('button', { name: 'Compress images' }).click(); await page.locator('#tool-root table').waitFor({ timeout: 20000 });
-await page.evaluate(() => { document.querySelector('#tool-root .notice').scrollIntoView({ block: 'center' }); }); await snap('phone-7-image-compressor.png');
+await page.locator('#tool-root input[type=file]').setInputFiles({ name: 'selfie.png', mimeType: 'image/png', buffer: Buffer.from(portrait, 'base64') });
+await page.locator('.idp-stage').waitFor(); await page.getByLabel('Background', { exact: true }).selectOption('white');
+await page.getByLabel('Zoom', { exact: true }).fill('125');
+await page.evaluate(() => { const t = document.querySelector('.idp-stage').getBoundingClientRect().top + window.scrollY - 150; window.scrollTo(0, Math.max(0, t)); }); await snap('phone-6-passport-photo.png');
+
+// 7. QR code for a Wi-Fi network
+await page.goto(`${base}#/tool/qr-code-generator`); await page.locator('#tool-root select').first().waitFor();
+await page.getByLabel('What is the code for?').selectOption('wifi');
+await page.getByLabel('Network name (SSID)').fill('Cafe Guest'); await page.getByLabel('Password').fill('welcome2026');
+await page.getByLabel('Code colour').fill('#1e1b4b');
+await page.evaluate(() => { const t = document.querySelector('.qr-card').getBoundingClientRect().top + window.scrollY - 96; window.scrollTo(0, Math.max(0, t)); }); await snap('phone-7-qr-code.png');
 
 // 8. All tools
-await page.goto(`${base}#/tools`); await page.locator('#dir-grid .tcard').first().waitFor(); await snap('phone-8-all-tools.png');
+await page.goto(base); await page.locator('.hero h1').waitFor(); await page.locator('button.icon-btn[data-open-palette]').click(); await page.locator('.palette-box').waitFor(); await page.locator('#pal-list li').first().waitFor(); await snap('phone-8-all-tools.png');
 
 await ctx.close(); await browser.close(); server.close();
 console.log('Play Store graphics written to store/');
