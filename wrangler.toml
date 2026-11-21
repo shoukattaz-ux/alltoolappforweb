@@ -1,0 +1,8 @@
+# Cloudflare deploy config. The app is 100% static, so it is served as static assets (no Worker code needed).
+# Build command: npm run build   Deploy command: npx wrangler deploy
+name = "toolhaven-studio"
+compatibility_date = "2026-11-01"
+
+[assets]
+directory = "./dist"
+# dist/_headers (CSP, HSTS, caching) is applied automatically by Cloudflare static assets.

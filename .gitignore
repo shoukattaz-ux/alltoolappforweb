@@ -1,0 +1,8 @@
+node_modules/
+dist/
+public/pdfjs/
+public/ocr/
+*.log
+.wrangler/
+tests/e2e/.tmp/
+site/

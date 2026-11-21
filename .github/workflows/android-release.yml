@@ -1,0 +1,111 @@
+name: Android release (signed AAB for Google Play)
+
+# Run this by hand: Actions > "Android release" > Run workflow. It needs the four signing secrets described in docs/PLAY-STORE.md.
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Version shown to users on Google Play, e.g. 1.0.0'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check the signing secrets exist
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KSP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KA: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=""
+          [ -n "$KS" ]  || missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -n "$KSP" ] || missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -n "$KA" ]  || missing="$missing ANDROID_KEY_ALIAS"
+          [ -n "$KP" ]  || missing="$missing ANDROID_KEY_PASSWORD"
+          if [ -n "$missing" ]; then echo "::error::Missing repository secrets:$missing. See docs/PLAY-STORE.md, step 2."; exit 1; fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Prepare the Android SDK
+        run: |
+          SDKM="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)"
+          yes | sudo env HOME=/root "JAVA_HOME=$JAVA_HOME" "$SDKM" --licenses > /dev/null || true
+          for pkg in "platforms;android-36" "build-tools;36.0.0"; do
+            if [ -d "$ANDROID_HOME/$(echo "$pkg" | tr ';' '/')" ]; then echo "already installed: $pkg"
+            else sudo env HOME=/root "JAVA_HOME=$JAVA_HOME" "$SDKM" "$pkg"; fi
+          done
+          mkdir -p "$HOME/.config/.android" "$HOME/.android"
+          sudo chown -R "$(id -u):$(id -g)" "$HOME/.config" "$HOME/.android"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install dependencies and test
+        run: |
+          npm ci
+          npm test
+
+      - name: Build the web app and sync it into the Android project
+        run: npm run android:sync
+
+      - name: Build the signed release (AAB for Google Play, APK for direct install)
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # Google Play needs a strictly increasing integer for every upload; the run number always increases.
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: ${{ inputs.version_name }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
+          ./gradlew testDebugUnitTest bundleRelease assembleRelease --no-daemon --stacktrace
+
+      - name: Verify the release (signed, correct version, no permissions, not debuggable)
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: ${{ inputs.version_name }}
+        run: |
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          test -f "$AAB" && test -f "$APK"
+          "$BT/apksigner" verify --verbose "$APK" | tee signer.txt
+          grep -q "Verifies" signer.txt
+          "$BT/aapt2" dump badging "$APK" | tee badging.txt | grep -E "^package|targetSdk"
+          grep -q "versionCode='$VERSION_CODE'" badging.txt
+          grep -q "versionName='$VERSION_NAME'" badging.txt
+          "$BT/aapt2" dump permissions "$APK" | tee permissions.txt
+          if grep -q "INTERNET" permissions.txt; then echo "::error::The release requests INTERNET; the privacy policy says it does not."; exit 1; fi
+          if "$BT/aapt2" dump xmltree --file AndroidManifest.xml "$APK" | grep -q "debuggable.*true"; then echo "::error::The release is debuggable."; exit 1; fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: toolhaven-release-${{ inputs.version_name }}-build${{ github.run_number }}
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove the signing key from the runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"
